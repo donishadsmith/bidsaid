@@ -228,6 +228,7 @@ def load_eprime_log(
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from milliseconds to seconds.
+        See `EPrime Timing <http://support.pstnet.com/hc/en-us/articles/4414899313303-TIMING-E-Prime-clock-starting-point-34474>`_.
 
     initial_column_headers : :obj:`Iterable[str]`, default=("ExperimentName", "Subject")
         The initial column headers for data.
@@ -281,6 +282,7 @@ def load_presentation_log(
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from 0.1ms to seconds.
+        See `Presentation Timing <https://www.neurobs.com/pres_docs/html/04_reference/03_pcl_reference/03_stimulus_types/38_stimulus_data.htm>`_.
 
     initial_column_headers : :obj:`str`, default=("Trial", "Event Type")
         The initial column headers for data.

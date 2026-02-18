@@ -939,6 +939,7 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from 0.1 ms to seconds.
+        See `Presentation Timing <https://www.neurobs.com/pres_docs/html/04_reference/03_pcl_reference/03_stimulus_types/38_stimulus_data.htm>`_.
 
         .. important::
            Recommend time resolution of the "Time" and "Duration" column to be converted.
@@ -1607,6 +1608,7 @@ class PresentationEventExtractor(PresentationExtractor, EventExtractor):
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from 0.1 ms to seconds.
+        See `Presentation Timing <https://www.neurobs.com/pres_docs/html/04_reference/03_pcl_reference/03_stimulus_types/38_stimulus_data.htm>`_.
 
         .. important::
            Recommend time resolution of the "Time" column and "Duration" column
@@ -1964,6 +1966,7 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from milliseconds to seconds.
+        See `EPrime Timing <http://support.pstnet.com/hc/en-us/articles/4414899313303-TIMING-E-Prime-clock-starting-point-34474>`_.
 
         .. important::
             Recommend time resolution of the columns containing the onset time, offset time (duration),
@@ -2734,6 +2737,7 @@ class EPrimeEventExtractor(EPrimeExtractor, EventExtractor):
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from milliseconds to seconds.
+        See `EPrime Timing <http://support.pstnet.com/hc/en-us/articles/4414899313303-TIMING-E-Prime-clock-starting-point-34474>`_.
 
         .. important::
            Recommend time resolution of the columns containing the onset times,
