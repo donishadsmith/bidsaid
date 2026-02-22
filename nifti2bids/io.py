@@ -207,3 +207,13 @@ def replace_ext(filename: str | Path, new_ext: str) -> Path:
     new_ext = f".{new_ext}" if not new_ext.startswith(".") else new_ext
 
     return Path(str(filename).replace(old_ext, new_ext))
+
+
+__all__ = [
+    "load_nifti",
+    "compress_image",
+    "regex_glob",
+    "get_nifti_header",
+    "get_nifti_affine",
+    "replace_ext",
+]

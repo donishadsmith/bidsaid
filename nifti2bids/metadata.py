@@ -2,7 +2,7 @@
 
 import datetime, re, sys
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Iterable, Literal, Optional
 
 import nibabel as nib, numpy as np
 
@@ -222,6 +222,44 @@ def get_image_orientation(
                 orientation_dict[voxel_dim] = f"{axis_start} -> {axis_end}"
 
     return orientation_dict, orientation
+
+
+def direction_to_voxel_axis(
+    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    anatomical_directions: Iterable[str],
+) -> tuple[str, int]:
+    """
+    Returns the voxel coordinate axis (and position) of a given anatomical direction.
+
+    Parameters
+    ----------
+    nifti_file_or_img : :obj:`str`, :obj:`Path`, or :obj:`Nifti1Image`, default=None
+        Path to the NIfTI file or a NIfTI image.
+
+    anatomical_directions : :obj:`Iterable[str]`
+        The anatomical directions.
+
+    Returns
+    -------
+    tuple(str, int)
+        A tuple of the axis and its position (axis, position).
+
+    Example
+    -------
+    Assuming image has RAS orientation
+    >>> from nifti2bids.simulate import simulate_nifti_image
+    >>> nifti_img = simulate_nifti_image(img_shape=(5, 5, 5, 5))
+    >>> direction_to_voxel_axis(nifti_img, ("A", "P"))
+        ("j", 2)
+    """
+    _, orientation = get_image_orientation(nifti_file_or_img)
+
+    arr = np.array(orientation)
+    voxel_index = int(np.where(np.isin(arr, anatomical_directions))[0][0])
+
+    voxel_pos_to_axis = {item: key for key, item in _VOXEL_INDX_DICT.items()}
+
+    return voxel_pos_to_axis[voxel_index], voxel_index
 
 
 def get_n_slices(
@@ -1128,10 +1166,12 @@ def compute_total_readout_time(
 
 
 __all__ = [
+    "needs_resampling",
     "determine_slice_axis",
     "get_hdr_metadata",
     "get_n_volumes",
     "get_image_orientation",
+    "direction_to_voxel_axis",
     "get_n_slices",
     "get_tr",
     "create_slice_timing",

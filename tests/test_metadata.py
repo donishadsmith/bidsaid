@@ -449,7 +449,7 @@ def test_compute_total_readout_time():
 
 
 def test_needs_resampling():
-    """Test for needs_resampling"""
+    """Test for ``needs_resampling``"""
     from nifti2bids.simulate import simulate_nifti_image, create_affine
 
     img_1 = simulate_nifti_image((97, 115, 98, 50))
@@ -459,3 +459,13 @@ def test_needs_resampling():
         (97, 115, 98, 50), create_affine([4, 4, 4, 1], [1, 1, 1, 1])
     )
     assert bids_meta.needs_resampling(img_1, img_2)
+
+
+def test_direction_to_voxel_axis():
+    """Test for ``direction_to_voxel_axis``"""
+    from nifti2bids.simulate import simulate_nifti_image
+
+    nifti_img = simulate_nifti_image(img_shape=(5, 5, 5, 5))
+    axis, pos = bids_meta.direction_to_voxel_axis(nifti_img, ("A", "P"))
+    assert axis == "j"
+    assert pos == 1

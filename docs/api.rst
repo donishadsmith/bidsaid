@@ -92,6 +92,7 @@ from NIfTIs.
    get_hdr_metadata
    get_n_volumes
    get_image_orientation
+   direction_to_voxel_axis
    get_n_slices
    get_tr
    create_slice_timing

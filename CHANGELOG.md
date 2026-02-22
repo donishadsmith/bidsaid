@@ -4,6 +4,9 @@ Documentation of changes for each version of ``Nifti2Bids``.
 
 **Currently doesn't follow semantic versioning.**
 
+## [0.17.5] - 2026-02-22
+- Add function to get axis of certain anatomical directions
+
 ## [0.17.4] - 2026-02-21
 - Adds additional helper functions
 
