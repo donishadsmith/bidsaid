@@ -122,6 +122,7 @@ Presentation and E-Prime 3 software.
    convert_edat3_to_text
    load_eprime_log
    load_presentation_log
+   get_presentation_log_date
 
 :mod:`nifti2bids.qc`
 --------------------

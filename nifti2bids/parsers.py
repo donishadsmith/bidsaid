@@ -27,12 +27,11 @@ def _determine_delimiter(
     str
         The delimiter
     """
-    sniffer = csv.Sniffer()
     for indx, line in enumerate(textlines):
         if line.startswith(tuple(initial_column_headers)):
             header_string = textlines[indx]
 
-    return sniffer.sniff(header_string, delimiters=None).delimiter
+    return csv.Sniffer().sniff(header_string, delimiters=None).delimiter
 
 
 def _convert_time(
@@ -88,10 +87,10 @@ def convert_edat3_to_text(
        - Only works with Windows platforms with E-Prime 3 installed.
 
     edat_path : :obj:`str` or :obj:`Path`
-        Absolute path to the E-Prime file with an "edat3" extension.
+        Path to the E-Prime file with an "edat3" extension.
 
     dst_path : :obj:`str` or :obj:`Path`, default=None
-        Absolute path to the output text file that the edat3 file will be converted to.
+        Path to the output text file that the edat3 file will be converted to.
         If None, the text file will be saved in the same folder as the edat3 file.
 
     format : :obj:`Literal["csv", "tsv"], default="csv"
@@ -154,6 +153,14 @@ def _is_float(value: str) -> bool:
         return False
 
 
+def _get_textlines(log_filepath: str | Path):
+    """Gets textlines from a log."""
+    with open(log_filepath, "r") as f:
+        textlines = f.readlines()
+
+    return textlines
+
+
 def _text_to_df(
     log_filepath: str | Path, initial_column_headers: Iterable[str]
 ) -> pd.DataFrame:
@@ -173,34 +180,32 @@ def _text_to_df(
     pandas.DataFrame
         A clean DataFrame of the log data.
     """
-    with open(log_filepath, "r") as f:
-        initial_column_headers = tuple(initial_column_headers)
-        textlines = f.readlines()
-        delimiter = _determine_delimiter(textlines, initial_column_headers)
-        content_indices = []
-        cleaned_textlines = [line for line in textlines if line != "\n"]
-        for indx, line in enumerate(cleaned_textlines):
-            # Get the starting index of the data columns
-            if line.startswith(f"{delimiter}".join(initial_column_headers)):
-                content_indices.append(indx)
-            # Get one more than the final index of the data colums
-            # More flexible, checks to see if line has at least one digit, which is likely a data line
-            elif content_indices and not any(
-                element.isdigit() or _is_float(element)
-                for element in line.split(f"{delimiter}")
-            ):
-                content_indices.append(indx)
-                break
+    textlines = _get_textlines(log_filepath)
+    initial_column_headers = tuple(initial_column_headers)
+    delimiter = _determine_delimiter(textlines, initial_column_headers)
+    content_indices = []
+    cleaned_textlines = [line for line in textlines if line != "\n"]
+    for indx, line in enumerate(cleaned_textlines):
+        # Get the starting index of the data columns
+        if line.startswith(f"{delimiter}".join(initial_column_headers)):
+            content_indices.append(indx)
+        # Get one more than the final index of the data colums
+        # More flexible, checks to see if line has at least one digit,
+        # which is likely a data line
+        elif content_indices and not any(
+            element.isdigit() or _is_float(element)
+            for element in line.split(f"{delimiter}")
+        ):
+            content_indices.append(indx)
+            break
 
-        start_indx = content_indices[0]
-        stop_indx = (
-            content_indices[1] if len(content_indices) > 1 else len(cleaned_textlines)
-        )
+    start_indx = content_indices[0]
+    stop_indx = (
+        content_indices[1] if len(content_indices) > 1 else len(cleaned_textlines)
+    )
 
-        text = "".join(cleaned_textlines[start_indx:stop_indx])
-        df = pd.read_csv(
-            io.StringIO(text, newline=None), sep=delimiter, low_memory=False
-        )
+    text = "".join(cleaned_textlines[start_indx:stop_indx])
+    df = pd.read_csv(io.StringIO(text, newline=None), sep=delimiter, low_memory=False)
 
     return df
 
@@ -224,7 +229,7 @@ def load_eprime_log(
     Parameters
     ----------
     log_filepath : :obj:`str` or :obj:`Path`
-        Absolute path to the Presentation log file (i.e text, log, excel files).
+        Path to the Presentation log file (i.e text, log, excel files).
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from milliseconds to seconds.
@@ -278,7 +283,7 @@ def load_presentation_log(
     Parameters
     ----------
     log_filepath : :obj:`str` or :obj:`Path`
-        Absolute path to the Presentation log file (i.e text, log, Excel files).
+        Path to the Presentation log file (i.e text, log, Excel files).
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns from 0.1ms to seconds.
@@ -310,8 +315,34 @@ def load_presentation_log(
     )
 
 
+def get_presentation_log_date(log_filepath: str | Path) -> tuple[str, str]:
+    """
+    Gets the date and time from a Presentation logfile.
+
+    Parameters
+    ----------
+    log_filepath : :obj:`str` or :obj:`Path`
+        Path to the Presentation log file (i.e text, log, Excel files).
+
+    Returns
+    -------
+    tuple[str, str]
+        A tuple of the date and time the logfile was generated.
+    """
+    header = "Logfile"
+    for line in _get_textlines(log_filepath):
+        if line.startswith(header):
+            break
+
+    # Delimiter is likely just a space but just in case
+    delimiter = csv.Sniffer().sniff(line, delimiters=None).delimiter
+
+    return line.removeprefix(header).strip().split(delimiter)[-2:]
+
+
 __all__ = [
     "convert_edat3_to_text",
     "load_eprime_log",
     "load_presentation_log",
+    "get_presentation_log_date",
 ]

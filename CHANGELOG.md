@@ -4,6 +4,9 @@ Documentation of changes for each version of ``Nifti2Bids``.
 
 **Currently doesn't follow semantic versioning.**
 
+## [0.17.6] - 2026-03-03
+- Add function to get logdate for Presentation
+
 ## [0.17.5] - 2026-02-22
 - Add function to get axis of certain anatomical directions
 

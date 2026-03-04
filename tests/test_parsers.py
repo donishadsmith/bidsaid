@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from nifti2bids.parsers import load_presentation_log, load_eprime_log
+from nifti2bids.parsers import (
+    load_presentation_log,
+    load_eprime_log,
+    get_presentation_log_date,
+)
 
 from ._constants import PRESENTATION_COLUMNS, EPRIME_DATA_NO_CUE
 
@@ -70,3 +74,11 @@ def test_load_eprime_log(create_eprime_logfile):
 
     df = load_eprime_log(src_file, convert_to_seconds=["Data.OnsetTime"])
     assert df.loc[0, "Data.OnsetTime"] == 10.0
+
+
+def test_get_presentation_log_date(create_presentation_logfile):
+    """Test for ``get_presentation_log_date`` function."""
+    src_file = create_presentation_logfile
+    date, time = get_presentation_log_date(src_file)
+    assert date == "09/24/2025"
+    assert time == "11:40:20"

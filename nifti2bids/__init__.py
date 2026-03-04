@@ -24,4 +24,4 @@ qc -- Quality control utilities for fMRI data (motion censoring, framewise displ
 simulate -- Simulate a basic NIfTI image or BIDS dataset for testing purposes
 """
 
-__version__ = "0.17.5"
+__version__ = "0.17.6"
