@@ -1,80 +1,69 @@
 """Module for creating simulated data."""
 
+"""Module for creating simulated data."""
+
 from pathlib import Path
 from typing import Optional
 
 import nibabel as nib, numpy as np
 from joblib import Parallel, delayed
-from numpy.typing import NDArray
+from nilearn.datasets import load_mni152_brain_mask
+from nilearn.image import resample_img
 from tqdm import tqdm
 
-from .logging import setup_logger
 from .bids import (
     _strip_none_entities,
     create_dataset_description,
     save_dataset_description,
 )
+from .logging import setup_logger
 
 LGR = setup_logger(__name__)
 
 
 def simulate_nifti_image(
-    img_shape: tuple[int, int, int] | tuple[int, int, int, int], affine: NDArray = None
+    img_shape: tuple[int, int, int] | tuple[int, int, int, int],
 ) -> nib.Nifti1Image:
     """
-    Simulates a NIfTI image.
+    Simulates a NIfTI image with random data within the MNI152 brain template.
 
     Parameters
     ----------
     img_shape : :obj:`tuple[int, int, int]` or :obj:`tuple[int, int, int, int]`
         Shape of the NIfTI image.
 
-    affine : :obj:`NDArray`, default=None
-        The affine matrix.
-
-        .. important::
-           If None, creates an identity matrix.
-
     Returns
     -------
     Nifti1Image
-        The NIfTI image with no header.
+        The NIfTI image.
     """
-    if affine is None:
-        affine = create_affine(
-            xyz_diagonal_value=1, translation_vector=np.array([0, 0, 0, 1])
-        )
+    if len(img_shape) not in [3, 4]:
+        raise ValueError("The image shape must be 3D or 4D.")
 
-    return nib.Nifti1Image(np.random.rand(*img_shape), affine)
+    whole_brain_mask = load_mni152_brain_mask(resolution=1, threshold=0.20)
 
+    new_affine = whole_brain_mask.affine.copy()
+    # Compute new voxel size to retain same brain size in mm
+    new_affine[:3, :3] = (
+        whole_brain_mask.affine[:3, :3]
+        * np.array(whole_brain_mask.shape[:3])
+        / np.array(img_shape[:3])
+    )
 
-def create_affine(
-    xyz_diagonal_value: int, translation_vector: list | tuple | NDArray
-) -> NDArray:
-    """
-    Generate an 4x4 affine matrix.
+    resampled_mask = resample_img(
+        whole_brain_mask,
+        target_shape=img_shape[:3],
+        target_affine=new_affine,
+        interpolation="nearest",
+    )
 
-    Parameters
-    ----------
-    xyz_diagonal_value : :obj:`int`
-        The value assigned to the diagonal of the affine for x, y, and z.
+    mask_data = resampled_mask.get_fdata()
+    if len(img_shape) == 4:
+        mask_data = mask_data[..., np.newaxis]
 
-    translation_vector : :obj:`list`, :obj:`tuple`, or :obj:`NDArray`
-        A 4x1 vector (or length-4 array) representing translation from
-        the origin (x, y, z, 1).
+    data = np.random.rand(*img_shape) * mask_data
 
-    Returns
-    -------
-    NDArray
-        The affine matrix.
-    """
-    affine = np.zeros((4, 4))
-    np.fill_diagonal(affine[:3, :3], xyz_diagonal_value)
-
-    translation_vector = np.array(translation_vector)
-    affine[:, 3:] = translation_vector[:, np.newaxis]
-
-    return affine
+    return nib.Nifti1Image(data, resampled_mask.affine)
 
 
 def simulate_bids_dataset(
@@ -133,8 +122,9 @@ def simulate_bids_dataset(
     Path
         Root of the simulated BIDS directory.
     """
-    bids_root = Path(output_dir)
-    if not bids_root:
+    if output_dir:
+        bids_root = Path(output_dir)
+    else:
         bids_root = Path().getcwd() / "simulated_bids_dir"
 
     if bids_root.exists():

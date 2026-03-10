@@ -4,6 +4,9 @@ Documentation of changes for each version of ``Nifti2Bids``.
 
 **Currently doesn't follow semantic versioning.**
 
+## [0.19.0] - 2026-03-10
+- Update simulate module
+
 ## [0.18.0] - 2026-03-08
 - Update to function that parses Presentation log generation date
 

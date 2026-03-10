@@ -156,5 +156,4 @@ Module for simulating NIfTI images and BIDS datasets.
    :toctree: generated/
 
    simulate_nifti_image
-   create_affine
    simulate_bids_dataset
