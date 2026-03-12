@@ -1,0 +1,49 @@
+name: Minimum Dependencies Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches:
+      - '*'
+  # Run weekly on Monday
+  schedule:
+    - cron: 0 0 * * 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-minimum-dependencies:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+
+    name: Python 3.10 on ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install minimum dependencies for Ubuntu and MacOS
+        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
+        run: |
+          pip install -r requirements.txt
+        working-directory: tests/minimum_dependencies
+
+      - name: Install minimum dependencies on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          git config --system core.longpaths true
+          pip install -r requirements.txt
+        working-directory: tests/minimum_dependencies
+
+      - name: Install package
+        run: pip install .[all]
+
+      - name: Run tests for all OS on Python 3.10
+        run: pytest .

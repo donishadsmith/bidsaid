@@ -30,9 +30,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-ver }}
 
-      - name: Install package
+      - name: Install package for Ubuntu and MacOS
+        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
         run: pip install .[all]
-        shell: bash
+
+      - name: Install package Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          git config --system core.longpaths true
+          pip install .[all]
 
       - name: Run tests with coverage for Ubuntu on Python 3.10
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-ver == '3.10' }}
