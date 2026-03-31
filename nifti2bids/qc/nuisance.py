@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 import nibabel as nib, numpy as np
 from nilearn.maskers import NiftiMasker
@@ -9,7 +8,7 @@ from nifti2bids.io import load_nifti
 
 def compute_global_signal(
     func_file_or_img: str | Path | nib.nifti1.Nifti1Image,
-    mask_img_or_file: Optional[str | Path | nib.nifti1.Nifti1Image] = None,
+    mask_img_or_file: str | Path | nib.nifti1.Nifti1Image | None = None,
 ) -> dict[str, np.ndarray]:
     """
     Compute global signal and percent signal change from functional NIfTI image.

@@ -1,13 +1,12 @@
 """Module for logging."""
 
 import logging
-from typing import Optional
 
 from rich.logging import RichHandler
 
 
 def setup_logger(
-    logger_name: str = None, level: Optional[int] = "INFO"
+    logger_name: str = None, level: int | str | None = "INFO"
 ) -> logging.Logger:
     """
     Sets up the logger.
@@ -21,7 +20,7 @@ def setup_logger(
     logger_name : :obj:`str`
         Name of the logger to return, if None, the root logger is returned.
 
-    level : :obj:`int` or :obj:`None`, default="INFO"
+    level : :obj:`int`, :obj:`str`, or :obj:`None`, default="INFO"
         The logging level. If None, the logging level is not set
 
     Returns

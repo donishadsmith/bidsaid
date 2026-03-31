@@ -3,7 +3,6 @@
 """Module for creating simulated data."""
 
 from pathlib import Path
-from typing import Optional
 
 import nibabel as nib, numpy as np
 from joblib import Parallel, delayed
@@ -68,11 +67,11 @@ def simulate_nifti_image(
 
 def simulate_bids_dataset(
     n_subs: int = 1,
-    n_sessions: Optional[int] = 1,
+    n_sessions: int | None = 1,
     n_runs: int = 1,
     task_name: str = "rest",
-    output_dir: Optional[str | Path] = None,
-    n_cores: Optional[int] = None,
+    output_dir: str | Path | None = None,
+    n_cores: int | None = None,
     progress_bar: bool = False,
 ) -> Path:
     """
@@ -182,7 +181,7 @@ def _create_session_files(
 def _create_sub_files(
     fmriprep_dir: Path,
     sub_id: int,
-    session_id: Optional[int],
+    session_id: int | None,
     n_runs: int,
     task_name: str,
 ) -> None:

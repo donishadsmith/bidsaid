@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterable, Literal, Optional
+from typing import Iterable, Literal
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ def compute_n_dummy_scans(confounds_file_or_df: str | Path | pd.DataFrame) -> in
 
 def _get_input_data(
     input_data: str | Path | pd.DataFrame | NDArray,
-    column_name: Optional[str] = None,
+    column_name: str | None = None,
     has_header: bool = True,
     verbose: bool = False,
     return_df: bool = False,
@@ -188,8 +188,8 @@ def compute_framewise_displacement(
 
 def create_censor_mask(
     input_data: str | Path | pd.DataFrame | NDArray,
-    column_name: Optional[str] = None,
-    threshold: Optional[float] = None,
+    column_name: str | None = None,
+    threshold: float | None = None,
     n_dummy_scans: int = 0,
     has_header: bool = True,
     verbose: bool = False,

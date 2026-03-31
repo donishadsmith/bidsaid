@@ -2,7 +2,7 @@
 
 import datetime, re, sys
 from pathlib import Path
-from typing import Any, Iterable, Literal, Optional
+from typing import Any, Iterable, Literal
 
 import nibabel as nib, numpy as np
 
@@ -48,8 +48,8 @@ def needs_resampling(
 
 @check_all_none(parameter_names=["nifti_file_or_img", "nifti_header"])
 def determine_slice_axis(
-    nifti_file_or_img: Optional[str | Path | nib.nifti1.Nifti1Image] = None,
-    nifti_header: Optional[nib.nifti1.Nifti1Header] = None,
+    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image | None = None,
+    nifti_header: nib.nifti1.Nifti1Header | None = None,
 ) -> int:
     """
     Determine the slice axis.
@@ -105,8 +105,8 @@ def _to_native_numeric(value: np.floating | np.int_) -> float | int:
 @check_all_none(parameter_names=["nifti_file_or_img", "nifti_header"])
 def get_hdr_metadata(
     metadata_name: str,
-    nifti_file_or_img: Optional[str | Path | nib.nifti1.Nifti1Image] = None,
-    nifti_header: Optional[nib.nifti1.Nifti1Header] = None,
+    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image | None = None,
+    nifti_header: nib.nifti1.Nifti1Header | None = None,
     return_header: bool = False,
 ) -> Any | tuple[Any, nib.nifti1.Nifti1Header]:
     """
@@ -264,7 +264,7 @@ def direction_to_voxel_axis(
 
 def get_n_slices(
     nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
-    slice_axis: Optional[Literal["i", "j", "k"]] = None,
+    slice_axis: Literal["i", "j", "k"] | None = None,
     verbose: bool = False,
 ) -> int:
     """
@@ -672,14 +672,14 @@ def _create_multiband_timing(
 
 def create_slice_timing(
     nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
-    tr: Optional[float | int] = None,
-    slice_axis: Optional[Literal["i", "j", "k"]] = None,
+    tr: float | int | None = None,
+    slice_axis: Literal["i", "j", "k"] | None = None,
     slice_acquisition_method: Literal[
         "sequential", "interleaved", "central", "reversed_central"
     ] = "interleaved",
     ascending: bool = True,
     interleaved_pattern: Literal["even", "odd", "philips"] = "odd",
-    multiband_factor: Optional[int] = None,
+    multiband_factor: int | None = None,
     verbose: bool = False,
 ) -> list[float]:
     """
@@ -1117,8 +1117,8 @@ def compute_effective_echo_spacing(
 
 
 def compute_total_readout_time(
-    effective_echo_spacing: Optional[float] = None,
-    recon_matrix_pe: Optional[int] = None,
+    effective_echo_spacing: float | None = None,
+    recon_matrix_pe: int | None = None,
     use_fallback_trt: bool = False,
 ) -> float:
     """

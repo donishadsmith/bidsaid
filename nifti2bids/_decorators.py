@@ -2,7 +2,7 @@
 
 import functools, inspect
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from ._helpers import iterable_to_str
 from .io import get_nifti_header
@@ -54,7 +54,7 @@ def check_all_none(parameter_names: list[str]) -> Callable:
     return decorator
 
 
-def check_nifti(nifti_param_name: Optional[str] = None) -> Callable:
+def check_nifti(nifti_param_name: str | None = None) -> Callable:
     """
     Checks if input NIfTI has qform or sform codes set to scanner.
 

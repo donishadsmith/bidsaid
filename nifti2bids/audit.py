@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import pandas as pd
 import numpy as np
@@ -30,7 +30,7 @@ class BIDSAuditor:
     """
 
     def __init__(
-        self, bids_dir: str | Path, derivatives_dir: Optional[bool | str | Path] = None
+        self, bids_dir: str | Path, derivatives_dir: bool | str | Path | None = None
     ):
         bids_dir = Path(bids_dir)
         if not bids_dir.exists():
@@ -49,7 +49,7 @@ class BIDSAuditor:
 
     @staticmethod
     @lru_cache(maxsize=2)
-    def _call_layout(bids_dir: str | Path, derivatives_dir: Optional[str | Path]):
+    def _call_layout(bids_dir: str | Path, derivatives_dir: str | Path | None):
         """
         Return the ``BIDSLayout``. Up to four layouts are cached.
 
@@ -80,7 +80,7 @@ class BIDSAuditor:
     @staticmethod
     @lru_cache(maxsize=2)
     def _get_subjects_and_sessions(
-        bids_dir: str | Path, derivatives_dir: Optional[str | Path], layout
+        bids_dir: str | Path, derivatives_dir: str | Path | None, layout
     ) -> tuple[list[str], list[str]]:
         """
         Gets dictionary of subject and their sessions. Caches results.
@@ -124,12 +124,12 @@ class BIDSAuditor:
     @lru_cache(maxsize=4)
     def _get_file_availability(
         bids_dir: str | Path,
-        derivatives_dir: Optional[str | Path],
+        derivatives_dir: str | Path | None,
         layout,
         file_type: Literal["nifti", "events", "sidecar"],
         scope: Literal["raw", "derivatives"],
-        template_space: Optional[str] = None,
-        run_id: Optional[str | int] = None,
+        template_space: str | None = None,
+        run_id: str | int | None = None,
     ) -> dict[str, list[str]]:
         """
         Creates file availability dictionary. Caches results.
@@ -216,8 +216,8 @@ class BIDSAuditor:
         self,
         file_type: Literal["nifti", "events", "sidecar"],
         scope: Literal["raw", "derivatives"],
-        template_space: Optional[str] = None,
-        run_id: Optional[str | int] = None,
+        template_space: str | None = None,
+        run_id: str | int | None = None,
     ):
         """
         Creates DataFrame of file availability.
@@ -273,7 +273,7 @@ class BIDSAuditor:
         BIDSAuditor._create_first_level_df.cache_clear()
 
     def check_raw_nifti_availability(
-        self, run_id: Optional[str | int] = None
+        self, run_id: str | int | None = None
     ) -> pd.DataFrame:
         """
         Checks the availability of the unpreprocessed NIfTI files for each subject and their sessions.
@@ -313,7 +313,7 @@ class BIDSAuditor:
         return self._create_df(file_type="nifti", scope="raw", run_id=run_id)
 
     def check_events_availability(
-        self, run_id: Optional[str | int] = None
+        self, run_id: str | int | None = None
     ) -> pd.DataFrame:
         """
         Checks the availability of events TSV files for each subject and their sessions.
@@ -352,7 +352,7 @@ class BIDSAuditor:
         return self._create_df(file_type="events", scope="raw", run_id=run_id)
 
     def check_raw_sidecar_availability(
-        self, run_id: Optional[str | int] = None
+        self, run_id: str | int | None = None
     ) -> pd.DataFrame:
         """
         Checks the availability of JSON sidecar files for each subject and their sessions.
@@ -392,7 +392,7 @@ class BIDSAuditor:
         return self._create_df(file_type="sidecar", scope="raw", run_id=run_id)
 
     def check_preprocessed_nifti_availability(
-        self, template_space: Optional[str] = None, run_id: Optional[str | int] = None
+        self, template_space: str | None = None, run_id: str | int | None = None
     ) -> pd.DataFrame:
         """
         Checks the availability of the preprocessed NIfTI files for each subject and their sessions.
@@ -443,10 +443,10 @@ class BIDSAuditor:
     @lru_cache(maxsize=8)
     def _create_first_level_df(
         bids_dir: str | Path,
-        derivatives_dir: Optional[str | Path],
+        derivatives_dir: str | Path | None,
         analysis_dir: str | Path,
-        template_space: Optional[str],
-        run_id: Optional[str | int],
+        template_space: str | None,
+        run_id: str | int | None,
         desc: str,
     ):
         """
@@ -511,7 +511,7 @@ class BIDSAuditor:
         self,
         analysis_dir: str | Path,
         template_space: str = None,
-        run_id: Optional[str | int] = None,
+        run_id: str | int | None = None,
         desc: str = "stats",
     ) -> pd.DataFrame:
         """

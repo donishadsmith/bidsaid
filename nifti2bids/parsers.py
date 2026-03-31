@@ -1,6 +1,6 @@
 import csv, io, tempfile, subprocess, sys
 from pathlib import Path
-from typing import Iterable, Literal, Optional
+from typing import Iterable, Literal
 
 import numpy as np, pandas as pd
 
@@ -76,7 +76,7 @@ def _convert_time(
 
 def convert_edat3_to_text(
     edat_path: str | Path,
-    dst_path: Optional[str | Path] = None,
+    dst_path: str | Path | None = None,
     format: Literal["csv", "tsv"] = "csv",
     return_dst_path: bool = True,
 ) -> Path | None:

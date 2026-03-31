@@ -2,7 +2,7 @@
 
 import shutil, re
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator
 
 import nibabel as nib
 from numpy.typing import NDArray
@@ -38,7 +38,7 @@ def load_nifti(
 
 def compress_image(
     nifti_file: str | Path,
-    dst_dir: Optional[str | Path] = None,
+    dst_dir: str | Path | None = None,
     remove_src_file: bool = False,
     return_dst_file: bool = False,
 ) -> Path | None:

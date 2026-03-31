@@ -3,7 +3,7 @@
 import json, itertools, re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Iterable, Literal, Optional
+from typing import Iterable, Literal
 
 import numpy as np, pandas as pd
 
@@ -24,9 +24,9 @@ def generate_bids_filename(
     sub_id: str | int,
     desc: str,
     ext: str,
-    ses_id: Optional[str | int] = None,
-    task_id: Optional[str] = None,
-    run_id: Optional[str | int] = None,
+    ses_id: str | int | None = None,
+    task_id: str | None = None,
+    run_id: str | int | None = None,
 ) -> str:
     """
     Generate a BIDs compliant filename.
@@ -71,9 +71,9 @@ def create_bids_file(
     src_file: str | Path,
     sub_id: str | int,
     desc: str,
-    ses_id: Optional[str | int] = None,
-    task_id: Optional[str] = None,
-    run_id: Optional[str | int] = None,
+    ses_id: str | int | None = None,
+    task_id: str | None = None,
+    run_id: str | int | None = None,
     dst_dir: str | Path = None,
     remove_src_file: bool = False,
     return_bids_filename: bool = False,
@@ -395,9 +395,7 @@ def _process_log_or_df(
     return df.replace("", np.nan, inplace=False)
 
 
-def combine_non_block_cue_names(
-    rest_block_codes: Optional[Iterable[str]], quit_code: str
-):
+def combine_non_block_cue_names(rest_block_codes: Iterable[str] | None, quit_code: str):
     """
     Combines name of rest codes and quit code.
 
@@ -422,8 +420,8 @@ def combine_non_block_cue_names(
 
 def _validate_no_cue_conflicts(
     block_cue_names: Iterable[str],
-    rest_block_codes: Optional[Iterable[str]],
-    quit_code: Optional[str],
+    rest_block_codes: Iterable[str] | None,
+    quit_code: str | None,
 ) -> None:
     """
     Check for overlap between task cues and boundary codes.
@@ -500,10 +498,10 @@ def _get_starting_block_indices(
 def _get_next_block_index(
     trial_series: pd.Series,
     block_start_index: int,
-    rest_block_codes: Optional[Iterable[str]],
+    rest_block_codes: Iterable[str] | None,
     rest_code_frequency: Literal["fixed", "variable"],
     block_cue_names: Iterable[str],
-    quit_code: Optional[str] = None,
+    quit_code: str | None = None,
 ) -> int:
     """
     Get the starting index for each block.
@@ -695,8 +693,8 @@ def _should_exclude_end_index(
     block_end_index: int,
     trial_column_name: str,
     block_cue_names: Iterable[str],
-    rest_block_codes: Optional[Iterable[str]],
-    quit_code: Optional[str],
+    rest_block_codes: Iterable[str] | None,
+    quit_code: str | None,
 ) -> bool:
     """
     Determine if ``block_end_index`` should be excluded from the block slice.
@@ -745,7 +743,7 @@ def _should_exclude_end_index(
 
 
 def convert_to_literal(
-    patterns: Optional[Iterable[str] | str], condition_series: pd.Series
+    patterns: Iterable[str] | str | None, condition_series: pd.Series
 ):
     """
     Convert regex to literals.
@@ -835,10 +833,10 @@ class PresentationExtractor:
         scanner_event_type: str,
         scanner_trigger_code: str,
         trial_column_name: str = "Code",
-        convert_to_seconds: Optional[list[str]] = None,
+        convert_to_seconds: list[str] | None = None,
         initial_column_headers: Iterable[str] = ("Trial", "Event Type"),
         n_discarded_volumes: int = 0,
-        tr: Optional[float | int] = None,
+        tr: float | int | None = None,
     ):
 
         df = _process_log_or_df(
@@ -887,7 +885,7 @@ class PresentationExtractor:
 
     def _process_scanner_start_time(
         self,
-        scanner_start_time: Optional[float | int],
+        scanner_start_time: float | int | None,
     ) -> list[float]:
         """Process scanner start time."""
         if scanner_start_time is not None:
@@ -1132,15 +1130,15 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
         scanner_event_type: str,
         scanner_trigger_code: str,
         trial_column_name: str = "Code",
-        convert_to_seconds: Optional[list[str]] = None,
+        convert_to_seconds: list[str] | None = None,
         initial_column_headers: Iterable[str] = ("Trial", "Event Type"),
         n_discarded_volumes: int = 0,
-        tr: Optional[float | int] = None,
-        rest_block_codes: Optional[str | Iterable[str]] = None,
+        tr: float | int | None = None,
+        rest_block_codes: str | Iterable[str] | None = None,
         rest_code_frequency: Literal["fixed", "variable"] = "fixed",
-        quit_code: Optional[str] = None,
+        quit_code: str | None = None,
         split_cue_as_instruction: bool = False,
-        block_cues_without_instruction: Optional[Iterable[str]] = None,
+        block_cues_without_instruction: Iterable[str] | None = None,
         instruction_suffix: str = "_instruction",
         drop_instruction_cues: bool = False,
     ):
@@ -1190,7 +1188,7 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
         )
 
     def extract_onsets(
-        self, scanner_start_time: Optional[float | int] = None
+        self, scanner_start_time: float | int | None = None
     ) -> list[float]:
         """
         Extract the onset times for each event.
@@ -1310,7 +1308,7 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
     def _get_block_trials(
         self,
         block_start_index: int,
-        response_trial_names: Optional[Iterable[str]] = None,
+        response_trial_names: Iterable[str] | None = None,
     ) -> pd.DataFrame:
         """
         Get trials within a block. Filtered by ``response_trial_names`` if not None.
@@ -1407,9 +1405,9 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
 
     def extract_mean_reaction_times(
         self,
-        response_map: Optional[dict[str, int]] = None,
+        response_map: dict[str, int] | None = None,
         response_type: Literal["correct", "incorrect"] = "correct",
-        response_trial_names: Optional[Iterable[str]] = None,
+        response_trial_names: Iterable[str] | None = None,
     ) -> list[float]:
         """
         Extract mean reaction times for each block.
@@ -1500,7 +1498,7 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
     def extract_mean_accuracies(
         self,
         response_map: dict[str, int],
-        response_trial_names: Optional[Iterable[str]] = None,
+        response_trial_names: Iterable[str] | None = None,
     ) -> list[float]:
         """
         Extract mean accuracy for each block.
@@ -1698,10 +1696,10 @@ class PresentationEventExtractor(PresentationExtractor, EventExtractor):
         scanner_event_type: str,
         scanner_trigger_code: str,
         trial_column_name: str = "Code",
-        convert_to_seconds: Optional[list[str]] = None,
+        convert_to_seconds: list[str] | None = None,
         initial_column_headers: Iterable[str] = ("Trial", "Event Type"),
         n_discarded_volumes: int = 0,
-        tr: Optional[float | int] = None,
+        tr: float | int | None = None,
     ):
         super().__init__(
             log_or_df,
@@ -1724,7 +1722,7 @@ class PresentationEventExtractor(PresentationExtractor, EventExtractor):
         self.event_trial_indices = trial_series.index.tolist()
 
     def extract_onsets(
-        self, scanner_start_time: Optional[float | int] = None
+        self, scanner_start_time: float | int | None = None
     ) -> list[float]:
         """
         Extract the onset times for each event.
@@ -1879,11 +1877,11 @@ class EPrimeExtractor:
         condition_codes: Iterable[str],
         onset_column_name: str,
         procedure_column_name: str,
-        trigger_column_name: Optional[None] = None,
-        convert_to_seconds: Optional[list[str]] = None,
+        trigger_column_name: str | None = None,
+        convert_to_seconds: list[str] | None = None,
         initial_column_headers: Iterable[str] = ("ExperimentName", "Subject"),
         n_discarded_volumes: int = 0,
-        tr: Optional[float | int] = None,
+        tr: float | int | None = None,
     ):
 
         self.df = _process_log_or_df(
@@ -1921,7 +1919,7 @@ class EPrimeExtractor:
 
     def _process_scanner_start_time(
         self,
-        scanner_start_time: Optional[float | int],
+        scanner_start_time: float | int | None,
     ) -> list[float]:
         """Process scanner start time."""
         if scanner_start_time is not None:
@@ -2157,16 +2155,16 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
         block_cue_names: Iterable[str],
         onset_column_name: str,
         procedure_column_name: str,
-        trigger_column_name: Optional[str] = None,
-        convert_to_seconds: Optional[list[str]] = None,
+        trigger_column_name: str | None = None,
+        convert_to_seconds: list[str] | None = None,
         initial_column_headers: Iterable[str] = ("ExperimentName", "Subject"),
         n_discarded_volumes: int = 0,
-        tr: Optional[float | int] = None,
-        rest_block_codes: Optional[str | Iterable[str]] = None,
+        tr: float | int | None = None,
+        rest_block_codes: str | Iterable[str] | None = None,
         rest_code_frequency: Literal["fixed", "variable"] = "fixed",
-        quit_code: Optional[str] = None,
+        quit_code: str | None = None,
         split_cue_as_instruction: bool = False,
-        block_cues_without_instruction: Optional[Iterable[str]] = None,
+        block_cues_without_instruction: Iterable[str] | None = None,
         instruction_suffix: str = "_instruction",
         drop_instruction_cues: bool = False,
     ):
@@ -2216,7 +2214,7 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
         )
 
     def extract_onsets(
-        self, scanner_start_time: Optional[float | int] = None
+        self, scanner_start_time: float | int | None = None
     ) -> list[float]:
         """
         Extract the onset times for each block.
@@ -2266,9 +2264,7 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
 
         return onsets
 
-    def extract_durations(
-        self, offset_column_name: Optional[str] = None
-    ) -> list[float]:
+    def extract_durations(self, offset_column_name: str | None = None) -> list[float]:
         """
         Extract the duration for each block.
 
@@ -2366,7 +2362,7 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
     def _get_block_trials(
         self,
         block_start_index: int,
-        response_trial_names: Optional[Iterable[str]] = None,
+        response_trial_names: Iterable[str] | None = None,
     ) -> pd.DataFrame:
         """
         Get trials within a block. Filtered by ``response_trial_names`` if not None.
@@ -2479,7 +2475,7 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
         subject_response_column: str,
         correct_response_column: str,
         response_type: Literal["correct", "incorrect"] = "correct",
-        response_trial_names: Optional[Iterable[str]] = None,
+        response_trial_names: Iterable[str] | None = None,
         response_required_only: bool = False,
     ) -> list[float]:
         """
@@ -2594,7 +2590,7 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
         self,
         subject_response_column: str,
         correct_response_column: str,
-        response_trial_names: Optional[Iterable[str]] = None,
+        response_trial_names: Iterable[str] | None = None,
         response_required_only: bool = False,
     ) -> list[float]:
         """
@@ -2833,11 +2829,11 @@ class EPrimeEventExtractor(EPrimeExtractor, EventExtractor):
         trial_types: Iterable[str],
         onset_column_name: str,
         procedure_column_name: str,
-        trigger_column_name: Optional[str] = None,
-        convert_to_seconds: Optional[str] = None,
+        trigger_column_name: str | None = None,
+        convert_to_seconds: str | None = None,
         initial_column_headers: Iterable[str] = ("ExperimentName", "Subject"),
         n_discarded_volumes: int = 0,
-        tr: Optional[float | int] = None,
+        tr: float | int | None = None,
     ):
         super().__init__(
             log_or_df,
@@ -2862,7 +2858,7 @@ class EPrimeEventExtractor(EPrimeExtractor, EventExtractor):
 
     def extract_onsets(
         self,
-        scanner_start_time: Optional[float | int] = None,
+        scanner_start_time: float | int | None = None,
     ) -> list[float]:
         """
         Extract the onset times for each event.
@@ -3056,7 +3052,7 @@ def add_instruction_timing(
     event_df: pd.DataFrame,
     instruction_duration: int | float,
     instruction_suffix: str = "_instruction",
-    exclude_trial_types: Optional[Iterable[str]] = None,
+    exclude_trial_types: Iterable[str] | None = None,
 ) -> pd.DataFrame:
     """
     Add instruction trials to a BIDS compliant events DataFrame.

@@ -1,6 +1,6 @@
 """Custom exceptions."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 
 class SliceAxisError(Exception):
@@ -29,7 +29,7 @@ class SliceAxisError(Exception):
         slice_axis: Literal["x", "y", "z"],
         n_slices: int,
         slice_end: int,
-        message: Optional[str] = None,
+        message: str | None = None,
     ):
         if not message:
             self.message = (
