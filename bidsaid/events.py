@@ -2811,11 +2811,6 @@ def add_instruction_timing(
 
 
 __all__ = [
-    "create_bids_file",
-    "get_entity_value",
-    "create_dataset_description",
-    "save_dataset_description",
-    "create_participant_tsv",
     "add_instruction_timing",
     "LogExtractor",
     "BlockExtractor",

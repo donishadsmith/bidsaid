@@ -2,7 +2,7 @@ Contributing
 ============
 BIDS-Aid is an open-source package, and all contributions are welcome to help improve, enhance, and refine it!
 
-Since the repository for BIDS-Aid is located on GitHub, you will need to create an account. Here are some
+Since the repository for BIDS-Aidgit  is located on GitHub, you will need to create an account. Here are some
 [instructions](https://docs.github.com/en/get-started/start-your-journey/creating-an-account-on-github) to get you started.
 
 Code of Conduct

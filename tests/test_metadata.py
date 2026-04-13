@@ -374,35 +374,6 @@ def test_get_scanner_info(nifti_img_and_path):
     assert model_name == "Ingenia Elition X 5.7.1"
 
 
-def test_is_valid_date():
-    """Test for ``is_valid_date``."""
-    assert bids_meta.is_valid_date("241010", "%y%m%d")
-
-
-def test_parse_date_from_path():
-    """Test for ``parse_date_from_path``."""
-    date = bids_meta.parse_date_from_path("101_240820_mprage_32chan.nii", "%y%m%d")
-    assert date == "240820"
-
-    date = bids_meta.parse_date_from_path("101_mprage_32chan.nii", "%y%m%d")
-    assert not date
-
-    date = bids_meta.parse_date_from_path(r"Users/users/Documents/101_240820", "%y%m%d")
-    assert date == "240820"
-
-
-def test_get_file_creation_date(tmp_dir):
-    """Test for ``get_file_creation_date``."""
-    from pathlib import Path
-
-    path = Path(tmp_dir.name) / "test.txt"
-    with open(path, "w") as f:
-        pass
-
-    date = bids_meta.get_file_creation_date(path, "%Y-%m-%d")
-    assert bids_meta.is_valid_date(date, "%Y-%m-%d")
-
-
 @pytest.mark.parametrize(
     "task_volumes", ({5: "flanker", 10: "nback"}, {"flanker": 5, "nback": 10})
 )

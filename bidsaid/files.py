@@ -328,3 +328,12 @@ def create_sessions_tsv(
         df.to_csv(Path(bids_dir) / f"{target_sub}_sessions.tsv", sep="\t", index=None)
 
     return df if return_df else None
+
+
+__all__ = [
+    "create_bids_file",
+    "get_entity_value",
+    "create_dataset_description",
+    "save_dataset_description",
+    "create_participant_tsv",
+]

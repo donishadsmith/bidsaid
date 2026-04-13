@@ -58,6 +58,9 @@ def simulate_nifti_image(
     if "copy_header" in inspect.signature(resample_img).parameters.keys():
         kwargs.update({"copy_header": True})
 
+    if "force_resample" in inspect.signature(resample_img).parameters.keys():
+        kwargs.update({"force_resample": True})
+
     resampled_mask = resample_img(**kwargs)
 
     mask_data = resampled_mask.get_fdata()

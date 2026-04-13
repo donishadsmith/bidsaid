@@ -81,6 +81,23 @@ Module for input/output operations on NIfTI files and images.
    get_nifti_affine
    replace_ext
 
+:mod:`bidsaid.path_utils`
+--------------------------
+Utilities related to parsing or sorting filenames.
+
+.. currentmodule:: bidsaid.path_utils
+
+.. autosummary::
+   :template: function.rst
+   :nosignatures:
+   :toctree: generated/
+
+   is_valid_date
+   parse_date_from_path
+   get_file_timestamp
+   get_file_creation_date
+   sort_by_acquisition_order
+
 :mod:`bidsaid.metadata`
 --------------------------
 Module containing functions to extract metadata information
@@ -104,10 +121,6 @@ from NIfTIs.
    create_slice_timing
    is_3d_img
    get_scanner_info
-   is_valid_date
-   parse_date_from_path
-   get_file_timestamp
-   get_file_creation_date
    infer_task_from_image
    get_recon_matrix_pe
    compute_effective_echo_spacing

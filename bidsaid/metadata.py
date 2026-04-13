@@ -1,6 +1,5 @@
 """Utility functions to extract or create metadata."""
 
-import datetime, re, sys
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
@@ -873,146 +872,6 @@ def get_scanner_info(
     return manufacturer_name, model_name
 
 
-def is_valid_date(date_str: str, date_fmt: str) -> bool:
-    """
-    Determine if a string is a valid date based on format.
-
-    Parameters
-    ----------
-    date_str : :obj:`str`
-        The string to be validated.
-
-    date_fmt : :obj:`str`
-        The expected format of the date.
-
-    Return
-    ------
-    bool
-        True if ``date_str`` has the format specified by ``date_fmt``.
-
-    Example
-    -------
-    >>> from bidsaid.metadata import is_valid_date
-    >>> is_valid_date("241010", "%y%m%d")
-        True
-    """
-    try:
-        datetime.datetime.strptime(date_str, date_fmt)
-        return True
-    except ValueError:
-        return False
-
-
-def parse_date_from_path(path: str | Path, date_fmt: str) -> str | None:
-    """
-    Get date from the stem of a path.
-
-    Parameters
-    ----------
-    path : :obj:`str` or :obj:`Path`
-        The absolute path, name of file, or folder.
-
-    date_fmt : :obj:`str`
-        The expected format of the date.
-
-    Returns
-    -------
-    str or None
-        A string if a valid date based on specified ``date_fmt`` is detected
-        or None if no valid date is detected.
-
-    Example
-    -------
-    >>> from bidsaid.metadata import parse_date_from_path
-    >>> date_str = parse_date_from_path("101_240820_mprage_32chan.nii", "%y%m%d")
-    >>> print(date_str)
-        "240820"
-    >>> folder = r"Users/users/Documents/101_240820"
-    >>> date_str = parse_date_from_path(folder, "%y%m%d")
-    >>> print(date_str)
-        "240820"
-    """
-    split_pattern = "|".join(map(re.escape, ["_", "-", " "]))
-
-    basename = Path(path).name
-    split_basename = re.split(split_pattern, basename)
-
-    date_str = None
-    for part in split_basename:
-        if is_valid_date(part, date_fmt):
-            date_str = part
-            break
-
-    return date_str
-
-
-def get_file_timestamp(path: Path | str) -> float:
-    """
-    Get timestamp of file.
-
-    .. important::
-       Returns timestamp of file creation for Windows
-       and modification timestamp for non-Windows systems (e.g.,
-       Linux, MAC, etc)
-
-       `Info about date issue for Unix-based
-       <https://docs.vultr.com/python/examples/get-file-creation-and-modification-date>`_.
-
-    Parameter
-    ---------
-    path : :obj:`str` or :obj:`Path`
-        Path to file.
-
-    Return
-    ------
-    float
-        The file timestamp (creation time for Windows and
-        modification time for non-Windows systems).
-    """
-    stat = Path(path).stat()
-    if sys.platform != "win32":
-        timestamp = stat.st_mtime
-    else:
-        if hasattr(stat, "st_birthtime"):
-            timestamp = stat.st_birthtime
-        else:
-            timestamp = stat.st_ctime
-
-    return timestamp
-
-
-def get_file_creation_date(path: str | Path, date_fmt: str) -> str:
-    """
-    Get creation date of a file
-
-    .. important::
-       Returns file creation date for Windows and file modification
-       date for non-Windows systems (e.g., Linux, MAC, etc)
-
-       `Info about date issue for Unix-based systems
-       <https://docs.vultr.com/python/examples/get-file-creation-and-modification-date>`_.
-
-
-    Parameters
-    ----------
-    path : :obj:`str` or :obj:`Path`
-        Path to file.
-
-    date_fmt : :obj:`str`
-        The desired output format of the date.
-
-    Returns
-    -------
-    str
-        File creation date for Windows and modification date for non-Windows systems.
-    """
-    timestamp = get_file_timestamp(path)
-
-    converted_timestamp = datetime.datetime.fromtimestamp(timestamp)
-
-    return converted_timestamp.strftime(date_fmt)
-
-
 def infer_task_from_image(
     nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
     task_volume_map: dict[str, int] | dict[int, str],
@@ -1177,10 +1036,6 @@ __all__ = [
     "create_slice_timing",
     "is_3d_img",
     "get_scanner_info",
-    "is_valid_date",
-    "parse_date_from_path",
-    "get_file_timestamp",
-    "get_file_creation_date",
     "infer_task_from_image",
     "get_recon_matrix_pe",
     "compute_effective_echo_spacing",

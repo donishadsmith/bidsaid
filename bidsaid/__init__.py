@@ -21,9 +21,11 @@ metadata -- Operations related to extracting or creating metadata information fr
 parsers -- Operations related to standardizing and parsing information logs created by stimulus
 neurobehavioral software such as Presentation and E-Prime
 
+path_utils -- Utilities related to parsing or sorting filenames
+
 qc -- Quality control utilities for fMRI data (motion censoring, framewise displacement, etc.)
 
 simulate -- Simulate a basic NIfTI image or BIDS dataset for testing purposes
 """
 
-__version__ = "0.21.0"
+__version__ = "0.22.0"
