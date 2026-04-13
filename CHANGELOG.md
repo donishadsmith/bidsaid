@@ -5,7 +5,7 @@ Documentation of changes for each version of ``BIDS-Aid``.
 **Currently doesn't follow semantic versioning.**
 
 ## [0.22.0] - 2026-04-13
-- Created new module (path_utils)
+- Created new module (``path_utils``)
 
 ## [0.21.0] - 2026-04-12
 - Splits ``bids`` module to ``files`` and ``events`` modules
