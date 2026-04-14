@@ -225,7 +225,11 @@ def sort_by_acquisition_order(
 
         try:
             last_number = int(capture_groups.group(2))
-        except AttributeError:
+        except (AttributeError, TypeError):
+            LGR.warning(
+                "The following filename does not have capture group 2 (i.e,, 101_2.nii instead of 101_2_1.nii) "
+                f"and a placeholder last number of 1 will be used: {filename}"
+            )
             last_number = 1
 
         first_number = int(capture_groups.group(1))

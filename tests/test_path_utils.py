@@ -69,8 +69,19 @@ def test_sort_by_acquisition_order():
     sorted_filenames = [Path(x) for x in sorted_filenames]
     assert sort_by_acquisition_order(filenames) == sorted_filenames
 
+    filenames = [
+        "101_10.nii",
+        "101_9.nii",
+    ]
+    sorted_filenames = [
+        "101_9.nii",
+        "101_10.nii",
+    ]
+    sorted_filenames = [Path(x) for x in sorted_filenames]
+    assert sort_by_acquisition_order(filenames) == sorted_filenames
+
     assert sort_by_acquisition_order(filenames, return_filenames_only=False)[0] == (
         1,
-        1,
-        Path("102_1_1.nii"),
+        9,
+        Path("101_9.nii"),
     )
