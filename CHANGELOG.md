@@ -4,6 +4,9 @@ Documentation of changes for each version of ``BIDS-Aid``.
 
 **Currently doesn't follow semantic versioning.**
 
+## [0.22.1] - 2026-04-13
+- Fix NoneType issue in ``sort_by_acquisition_order`` function
+
 ## [0.22.0] - 2026-04-13
 - Created new module (``path_utils``)
 
