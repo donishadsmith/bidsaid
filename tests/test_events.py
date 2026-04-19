@@ -111,19 +111,36 @@ def test_PresentationBlockExtractor_mean_rt_and_accuracy(tmp_dir):
         drop_instruction_cues=True,
     )
 
-    mean_rts = extractor.extract_mean_reaction_times()
-    assert len(mean_rts) == 2
+    # Test mean RT for all trials (default)
+    mean_rts_all = extractor.extract_mean_reaction_times()
+    assert len(mean_rts_all) == 2
     # Block 1: Mean = (1.5 + 1.2 + 1.6 + 1.1) / 4 = 1.35s
-    assert mean_rts[0] == pytest.approx(1.35, rel=1e-2)
-    # Block 2: Mean = (1.5 + 1.1 + 1.6) / 3 = 1.400s
-    assert mean_rts[1] == pytest.approx(1.400, rel=1e-2)
+    assert mean_rts_all[0] == pytest.approx(1.35, rel=1e-2)
+    # Block 2: Mean = (1.5 + 1.1 + 1.6 + NaN) / 3 = 1.400s
+    assert mean_rts_all[1] == pytest.approx(1.400, rel=1e-2)
+
+    # Test mean RT for correct trials only
+    response_map = {"hit": 1, "miss": 0}
+    mean_rts_correct = extractor.extract_mean_reaction_times(
+        response_map=response_map,
+        response_type="correct",
+    )
+    assert len(mean_rts_correct) == 2
+    # Block 1: only correct (1.5 + 1.2 + 1.1) / 3
+    assert mean_rts_correct[0] == pytest.approx(1.2667, rel=1e-2)
+    # Block 2: Mean = (1.5 + 1.1 + 1.6 + NaN) / 3 = 1.400s
+    assert mean_rts_correct[1] == pytest.approx(1.400, rel=1e-2)
+
+    # Test that response_map is required when response_type is not "all"
+    with pytest.raises(ValueError, match="response_map"):
+        extractor.extract_mean_reaction_times(response_type="correct")
 
     # Test mean accuracies
     response_map = {"hit": 1, "miss": 0}
     mean_accs = extractor.extract_mean_accuracies(response_map=response_map)
     assert len(mean_accs) == 2
     # Block 1
-    assert mean_accs[0] == 1.0
+    assert mean_accs[0] == 0.75
     # Block 2 is missing one response (1 + 1 + 1 + 0) = 0.75
     assert mean_accs[1] == 0.75
 
@@ -304,18 +321,36 @@ def test_EPrimeBlockExtractor_mean_rt_and_accuracy(tmp_dir):
         rest_code_frequency="variable",
     )
 
-    mean_rts = extractor.extract_mean_reaction_times(
+    # Test mean RT for all trials (default)
+    mean_rts_all = extractor.extract_mean_reaction_times(
+        reaction_time_column_name="Data.RT",
+    )
+    assert len(mean_rts_all) == 2
+    # Block A: (0.5 + 0.6) / 2 = 0.55
+    assert mean_rts_all[0] == pytest.approx(0.55)
+    # Block B: (0.5 + 0.7) / 2 = 0.6
+    assert mean_rts_all[1] == pytest.approx(0.6)
+
+    # Test mean RT for correct trials only
+    mean_rts_correct = extractor.extract_mean_reaction_times(
         reaction_time_column_name="Data.RT",
         subject_response_column="Data.RESP",
         correct_response_column="Data.CRESP",
         response_type="correct",
         response_trial_names=("A", "B"),
     )
-    assert len(mean_rts) == 2
-    # Block A
-    assert mean_rts[0] == 0.5
-    # Block B
-    assert mean_rts[1] == 0.6
+    assert len(mean_rts_correct) == 2
+    # Block A: only correct trial has RT 0.5
+    assert mean_rts_correct[0] == 0.5
+    # Block B: both correct, (0.5 + 0.7) / 2 = 0.6
+    assert mean_rts_correct[1] == 0.6
+
+    # Test that columns are required when response_type is not "all"
+    with pytest.raises(ValueError, match="subject_response_column"):
+        extractor.extract_mean_reaction_times(
+            reaction_time_column_name="Data.RT",
+            response_type="correct",
+        )
 
     mean_accs = extractor.extract_mean_accuracies(
         subject_response_column="Data.RESP",
@@ -377,6 +412,7 @@ def test_EPrimeBlockExtractor_instruction_cue_separation(
         reaction_time_column_name="Data.RT",
         subject_response_column="Data.RESP",
         correct_response_column="Data.CRESP",
+        response_type="correct",
     )
     mean_accs = extractor.extract_mean_accuracies(
         subject_response_column="Data.RESP",

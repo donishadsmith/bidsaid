@@ -1083,7 +1083,7 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
     def extract_mean_reaction_times(
         self,
         response_map: dict[str, int] | None = None,
-        response_type: Literal["correct", "incorrect"] = "correct",
+        response_type: Literal["correct", "incorrect", "all"] = "all",
         response_trial_names: Iterable[str] | None = None,
     ) -> list[float]:
         """
@@ -1091,24 +1091,24 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
 
         Parameters
         ----------
-        response_map : :obj:`dict[str, int]`
+        response_map : :obj:`dict[str, int]` or :obj:`None`, default=None
             A dictionary mapping response codes, from "Stim Type" column
             (ie. "hit", "miss", "other", "false alarm", "incorrect"), to accuracy
-            values (0 for incorrect, 1 for correct). If provided, reaction times
-            are filtered based on ``response_type``. If None, all reaction times
-            with a response are included.
+            values (0 for incorrect, 1 for correct). Use ``float("NaN")`` to
+            exclude a response code from the computation. Required when
+            ``response_type`` is "correct" or "incorrect".
 
-        response_type : :obj:`Literal["correct", "incorrect"]`, default="correct"
-            Whether to compute mean RT for correct or incorrect trials.
-            Only used when ``response_map`` is provided.
+        response_type : :obj:`Literal["correct", "incorrect", "all"]`, default="all"
+            Whether to compute mean RT for correct, incorrect, or all trials.
+            When "all", ``response_map`` is not needed.
 
         response_trial_names : :obj:`Iterable[str]` or :obj:`None`, default=None
             The stimulus trial names within each block to include for the
             reaction_time computation.
 
             .. important::
-               If ``split_cue_as_instruction`` is True, block cue names
-               are excluded from this parameter.
+            If ``split_cue_as_instruction`` is True, block cue names
+            are excluded from this parameter.
 
         Returns
         -------
@@ -1131,6 +1131,12 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
         ...     response_type="correct",
         ... )
         """
+        if response_type in ("correct", "incorrect") and response_map is None:
+            raise ValueError(
+                "``response_map`` must be provided when ``response_type`` "
+                "is 'correct' or 'incorrect'."
+            )
+
         response_trial_names = _filter_response_trial_names(
             response_trial_names, self.split_cue_as_instruction, self.block_cue_names
         )
@@ -1141,7 +1147,13 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
             block_df = self._get_block_trials(block_start_index, response_trial_names)
             reaction_times, responses = self._extract_rts_and_responses(block_df)
 
-            if response_map is not None:
+            if response_type == "all":
+                mean_rt = (
+                    np.nanmean(reaction_times)
+                    if len(reaction_times) > 0 and not np.all(np.isnan(reaction_times))
+                    else np.nan
+                )
+            else:
                 target_correctness = 1 if response_type == "correct" else 0
                 filtered_rts = [
                     rt
@@ -1151,12 +1163,6 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
                 mean_rt = (
                     np.nanmean(filtered_rts)
                     if len(filtered_rts) > 0 and not np.all(np.isnan(filtered_rts))
-                    else np.nan
-                )
-            else:
-                mean_rt = (
-                    np.nanmean(reaction_times)
-                    if len(reaction_times) > 0 and not np.all(np.isnan(reaction_times))
                     else np.nan
                 )
 
@@ -1182,10 +1188,12 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
 
         Parameters
         ----------
-        response_map : :obj:`dict[str, int]`
+        response_map : :obj:`dict[str, int]` or :obj:`None`, default=None
             A dictionary mapping response codes, from "Stim Type" column
             (ie. "hit", "miss", "other", "false alarm", "incorrect"), to accuracy
-            values (0 for incorrect, 1 for correct).
+            values (0 for incorrect, 1 for correct). Use ``float("NaN")`` to
+            exclude a response code from the computation. Required when
+            ``response_type`` is "correct" or "incorrect".
 
         response_trial_names : :obj:`Iterable[str]` or :obj:`None`, default=None
             The stimulus trial names within each block to include for the
@@ -1219,10 +1227,12 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
             block_df = self._get_block_trials(block_start_index, response_trial_names)
             _, responses = self._extract_rts_and_responses(block_df)
 
-            converted_responses = [response_map[resp] for resp in responses]
+            converted_responses = [float(response_map[resp]) for resp in responses]
 
-            if len(converted_responses) > 0:
-                mean_accuracy = sum(converted_responses) / len(converted_responses)
+            if len(converted_responses) > 0 and not np.all(
+                np.isnan(converted_responses)
+            ):
+                mean_accuracy = np.nanmean(converted_responses)
             else:
                 mean_accuracy = np.nan
 
@@ -2149,16 +2159,16 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
     def extract_mean_reaction_times(
         self,
         reaction_time_column_name: str,
-        subject_response_column: str,
-        correct_response_column: str,
-        response_type: Literal["correct", "incorrect"] = "correct",
+        subject_response_column: str | None = None,
+        correct_response_column: str | None = None,
+        response_type: Literal["correct", "incorrect", "all"] = "all",
         response_trial_names: Iterable[str] | None = None,
         response_required_only: bool = False,
     ) -> list[float]:
         """
         Extract mean reaction times for each block.
 
-        Computes mean reaction time filtered for correct or incorrect trials.
+        Computes mean reaction time filtered for correct, incorrect, or all trials.
 
         Parameters
         ----------
@@ -2167,16 +2177,21 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
             Usually the column name ending in ".RT" not the column
             ending in ".RTTime".
 
-        subject_response_column : :obj:`str`
+        subject_response_column : :obj:`str` or :obj:`None`, default=None
             The name of the column containing the subject's response.
-            Usually the column name ending in ".RESP".
+            Usually the column name ending in ".RESP". Required when
+            ``response_type`` is "correct" or "incorrect", or when
+            ``response_required_only`` is True.
 
-        correct_response_column : :obj:`str`
+        correct_response_column : :obj:`str` or :obj:`None`, default=None
             The name of the column containing the correct response.
-            For no-go trials, this should be empty/NaN.
+            For no-go trials, this should be empty/NaN. Required when
+            ``response_type`` is "correct" or "incorrect", or when
+            ``response_required_only`` is True.
 
-        response_type : :obj:`Literal["correct", "incorrect"]`, default="correct"
-            Whether to compute mean reaction time for correct or incorrect trials.
+        response_type : :obj:`Literal["correct", "incorrect", "all"]`, default="all"
+            Whether to compute mean reaction time for correct, incorrect,
+            or all trials.
 
         response_trial_names : :obj:`Iterable[str]` or :obj:`None`, default=None
             The stimulus trial names within each block to include for the
@@ -2203,25 +2218,36 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
         ``correct_response_column``:
 
         - A trial is **correct** if the responses match, OR if both are NaN
-          (e.g. correct withhold on a no-go trial).
+        (e.g. correct withhold on a no-go trial).
         - A trial is **incorrect** if they differ (wrong response, miss, or
-          false alarm).
+        false alarm).
 
         Trials with NaN reaction times (due to filtering) are excluded via ``np.nanmean``.
         Also, if instruction cue is separated, NaN will be assigned for its reaction time.
 
         Example
         -------
+        >>> # Get mean reaction time for all trials (no accuracy filtering)
+        >>> mean_reaction_times = extractor.extract_mean_reaction_times(
+        ...     reaction_time_column_name="Stimulus.RT",
+        ... )
         >>> # Get mean reaction time for correct Go trials only
         >>> mean_reaction_times = extractor.extract_mean_reaction_times(
         ...     reaction_time_column_name="Stimulus.RT",
         ...     subject_response_column="Stimulus.RESP",
         ...     correct_response_column="CorrectResponse",
         ...     response_type="correct",
-        ...     response_trial_names=("Go")
+        ...     response_trial_names=("Go",),
         ... )
         """
-        target_correctness = response_type == "correct"
+        if response_type in ("correct", "incorrect") or response_required_only:
+            if not subject_response_column or not correct_response_column:
+                raise ValueError(
+                    "``subject_response_column`` and ``correct_response_column`` "
+                    "must be provided when ``response_type`` is 'correct' or "
+                    "'incorrect', or when ``response_required_only`` is True."
+                )
+
         mean_reaction_times = []
 
         response_trial_names = _filter_response_trial_names(
@@ -2232,24 +2258,39 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
             block_cue_name = self.df.loc[block_start_index, self.procedure_column_name]
             block_df = self._get_block_trials(block_start_index, response_trial_names)
 
-            correctness, block_df = self._compute_trial_correctness(
-                block_df,
-                subject_response_column,
-                correct_response_column,
-                response_required_only,
-            )
+            if response_type == "all":
+                if response_required_only:
+                    correct_response = block_df[correct_response_column].apply(
+                        lambda x: float(x) if _is_float(x) else x
+                    )
+                    block_df = block_df[~correct_response.isna()]
 
-            if not correctness.empty:
-                filtered_rts = block_df.loc[
-                    correctness == target_correctness, reaction_time_column_name
-                ]
+                rts = block_df[reaction_time_column_name].replace(0, np.nan)
                 mean_rt = (
-                    np.nanmean(filtered_rts)
-                    if filtered_rts.size > 0 and not np.all(np.isnan(filtered_rts))
+                    np.nanmean(rts)
+                    if rts.size > 0 and not np.all(np.isnan(rts))
                     else np.nan
                 )
             else:
-                mean_rt = np.nan
+                correctness, block_df = self._compute_trial_correctness(
+                    block_df,
+                    subject_response_column,
+                    correct_response_column,
+                    response_required_only,
+                )
+
+                if not correctness.empty:
+                    filtered_rts = block_df.loc[
+                        correctness == (response_type == "correct"),
+                        reaction_time_column_name,
+                    ]
+                    mean_rt = (
+                        np.nanmean(filtered_rts)
+                        if filtered_rts.size > 0 and not np.all(np.isnan(filtered_rts))
+                        else np.nan
+                    )
+                else:
+                    mean_rt = np.nan
 
             should_separate_block = _separate_block_from_cue(
                 self.split_cue_as_instruction,
