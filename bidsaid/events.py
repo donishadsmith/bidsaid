@@ -32,7 +32,7 @@ def _process_log_or_df(
     Parameters
     ----------
     log_or_df : :obj:`str`, :obj:`Path`, :obj:`pd.DataFrame`
-        The log or DataFrame of event informaiton from a neurobehavioral software.
+        The log or DataFrame of event information from a neurobehavioral software.
 
     convert_to_seconds : :obj:`list[str]` or :obj:`None`, default=None
         Convert the time resolution of the specified columns.

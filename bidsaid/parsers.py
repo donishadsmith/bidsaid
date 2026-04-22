@@ -238,9 +238,6 @@ def load_eprime_log(
     initial_column_headers : :obj:`Iterable[str]`, default=("ExperimentName", "Subject")
         The initial column headers for data.
 
-    drop_columns : :obj:`list[str]` or :obj:`None`, default=None
-        Remove specified columns from dataframe.
-
     Returns
     -------
     pandas.Dataframe

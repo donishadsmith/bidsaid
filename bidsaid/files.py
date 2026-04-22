@@ -83,9 +83,6 @@ def create_bids_file(
     ses_id : :obj:`str` or :obj:`int` or :obj:`None`, default=None
         Session ID (i.e. 001, 1, etc). Optional entity.
 
-    ses_id : :obj:`str` or :obj:`int` or :obj:`None`, default=None
-        Session ID (i.e. 001, 1, etc). Optional entity.
-
     task_id : :obj:`str` or :obj:`None`, default=None
         Task ID (i.e. flanker, n_back, etc). Optional entity.
 
