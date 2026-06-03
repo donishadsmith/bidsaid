@@ -79,6 +79,3 @@ Homepage = "https://bidsaid.readthedocs.io"
 Github = "https://github.com/donishadsmith/bidsaid"
 Issues = "https://github.com/donishadsmith/bidsaid/issues"
 Changelog = "https://bidsaid.readthedocs.io/en/stable/changelog.html"
-
-[bdist_wheel]
-universal = 1
