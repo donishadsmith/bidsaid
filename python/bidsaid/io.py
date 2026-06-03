@@ -1,11 +1,17 @@
 """Module for input/output operations."""
 
-import gzip, shutil, re
+import shutil, re
 from pathlib import Path
 from typing import Iterator
 
-import nibabel as nib
+import nibabel as nib, numpy as np
 from numpy.typing import NDArray
+
+from bidsaid._helpers import is_path
+from bidsaid.logging import setup_logger
+from bidsaid._rust import compress_nifti_image
+
+LGR = setup_logger(__name__)
 
 
 def load_nifti(
@@ -41,7 +47,7 @@ def compress_image(
     dst_dir: str | Path | None = None,
     remove_src_file: bool = False,
     return_dst_file: bool = False,
-    use_gzip: bool = False,
+    compression_level: int = 6,
 ) -> Path | None:
     """
     Compresses a ".nii" image to a ".nii.gz" image.
@@ -61,32 +67,23 @@ def compress_image(
     return_dst_file : :obj:`bool`, default=False
         Return the path to the compressed file.
 
-    use_gzip : :obj:`bool`, default=False
-        If True, compresses file directly with ``gzip`` instead of passing to ``nibabel``
-        for compression. Recommend to use if an ``OSError`` (e.g., insufficient memory)
-        occurs during compression.
+    compression_level : :obj:`int`, default=6
+        Level of compression from 0 to 9. Higher levels are slower but
+        produce smaller file sizes.
 
     Returns
     -------
     Path or None
         Path to compressed file if ``return_dst_file`` is True else None.
     """
-    img = nib.load(nifti_file)
-
     nifti_file = Path(nifti_file)
     dst_dir = Path(dst_dir) if dst_dir else nifti_file.parent
 
     dst_file = dst_dir / str(nifti_file.name).replace(".nii", ".nii.gz")
 
-    if use_gzip:
-        with open(nifti_file, "rb") as input_file:
-            with gzip.open(dst_file, "wb") as output_file:
-                shutil.copyfileobj(input_file, output_file)
-    else:
-        nib.save(img, dst_file)
-
-    if remove_src_file:
-        nifti_file.unlink(missing_ok=True)
+    compress_nifti_image(
+        str(nifti_file), str(dst_file), compression_level, remove_src_file
+    )
 
     return dst_file if return_dst_file else None
 
@@ -147,6 +144,47 @@ def get_nifti_header(
         The header from a NIfTI image.
     """
     return load_nifti(nifti_file_or_img).header
+
+
+def is_nifti_truncated(nifti_file: str | Path) -> bool:
+    """
+    Checks expected byte size and actual byte size of uncompressed NIfTI images.
+
+    Parameters
+    ----------
+    nifti_file : :obj:`str`or :obj:`Path`
+        Path to the NIfTI file.
+
+    Returns
+    -------
+    bool
+        True if the NIfTI image is truncated (expected byte size < actual byte size)
+        and False otherwise.
+    """
+    if not is_path(nifti_file):
+        raise ValueError("`nifti_file` must be a Path or string.")
+
+    nifti_file = Path(nifti_file)
+    if nifti_file.name.endswith(".gz"):
+        raise ValueError("Only uncompressed files are allowed.")
+
+    hdr = get_nifti_header(nifti_file)
+    n_voxels = int(np.prod(hdr.get_data_shape()))
+    bytes_per_voxel = hdr.get_data_dtype().itemsize
+    expected_data_bytes = n_voxels * bytes_per_voxel
+
+    offset = int(hdr.get_data_offset())
+    actual_data_bytes = nifti_file.stat().st_size - offset
+
+    if actual_data_bytes < expected_data_bytes:
+        LGR.warning(
+            f"Truncated NIfTI: {nifti_file} header expects {expected_data_bytes} data bytes "
+            f"({n_voxels} voxels * {bytes_per_voxel} bytes) after offset {offset}, "
+            f"but only {actual_data_bytes} are present."
+        )
+        return True
+    else:
+        return False
 
 
 def get_nifti_affine(nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image) -> NDArray:
@@ -223,6 +261,7 @@ def replace_ext(filename: str | Path, new_ext: str) -> Path:
 __all__ = [
     "load_nifti",
     "compress_image",
+    "is_nifti_truncated",
     "regex_glob",
     "get_nifti_header",
     "get_nifti_affine",

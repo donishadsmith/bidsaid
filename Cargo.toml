@@ -1,0 +1,14 @@
+[package]
+name = "bidsaid"
+version = "0.26.0"
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.28.3", features = ["abi3-py310"] }
+flate2 = "1.1.9"
+gzp = {version = "2.0.2", default-features = false, features = ["deflate_rust"] }

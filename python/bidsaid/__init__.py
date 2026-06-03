@@ -1,3 +1,5 @@
+from importlib.metadata import version
+
 """
 A toolkit for creating and managing BIDS-compliant fMRI datasets without original DICOMs.
 -----------------------------------------------------------------------------------------
@@ -28,4 +30,4 @@ qc -- Quality control utilities for fMRI data (motion censoring, framewise displ
 simulate -- Simulate a basic NIfTI image or BIDS dataset for testing purposes
 """
 
-__version__ = "0.25.1"
+__version__ = version("bidsaid")

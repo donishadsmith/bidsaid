@@ -4,6 +4,11 @@ Documentation of changes for each version of ``BIDS-Aid``.
 
 **Currently doesn't follow semantic versioning.**
 
+## [0.26.0] - 2026-06-03
+- Compression logic in ``compress_image`` is now implemented in Rust
+- Added ``is_nifti_truncated`` to check whether an uncompressed NIfTI file's data matches its header before compression
+- Added ``compression_level`` parameter to ``compress_image``
+
 ## [0.25.1] - 2026-05-20
 - Add missing_ok parameter for unlinking files
 

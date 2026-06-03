@@ -1,9 +1,6 @@
 [build-system]
-requires = ["setuptools>=77.0.1"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.dynamic]
-version = {attr = "bidsaid.__version__"}
+requires = ["maturin>=1.13.3,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "bidsaid"
@@ -55,7 +52,7 @@ test = ["pytest", "pytest-cov"]
 windows = ["pybids>=0.16.5"]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["python/bidsaid"]
 include = ["bidsaid", "bidsaid.*"]
 
 [tool.coverage.report]
@@ -71,6 +68,11 @@ python_files = ["test_*.py"]
 
 [tool.black]
 line-length = 88
+
+[tool.maturin]
+python-source = "python"
+module-name = "bidsaid._rust"
+features = ["pyo3/extension-module"]
 
 [project.urls]
 Homepage = "https://bidsaid.readthedocs.io"

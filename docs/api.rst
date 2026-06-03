@@ -76,6 +76,7 @@ Module for input/output operations on NIfTI files and images.
 
    load_nifti
    compress_image
+   is_nifti_truncated
    regex_glob
    get_nifti_header
    get_nifti_affine

@@ -29,3 +29,12 @@ repos:
         - id: ruff
           entry: ruff check --select T201
           files: '(^bidsaid/.*\.py$|^tests/.*\.py$)'
+
+-   repo: local
+    hooks:
+      - id: fmt
+        name: cargo fmt
+        entry: cargo fmt
+        language: system
+        types: [rust]
+        pass_filenames: false

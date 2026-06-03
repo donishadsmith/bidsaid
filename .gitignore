@@ -1,7 +1,10 @@
 .DS_Store
 __pycache__/
 generated/
-venv/
+*venv
 docs/_build/
 dist/
 bidsaid.egg-info
+target/
+*.pdb
+*.pyd
