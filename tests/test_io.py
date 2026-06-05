@@ -72,3 +72,4 @@ def test_compress_image(nifti_img_and_path, compression_level):
     compressed_img = bids_io.load_nifti(files[0])
     assert compressed_img.shape == img.shape
     np.testing.assert_array_equal(compressed_img.get_fdata(), img.get_fdata())
+    assert bids_io.get_nifti_header(compressed_img) == bids_io.get_nifti_header(img)

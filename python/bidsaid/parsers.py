@@ -78,8 +78,7 @@ def convert_edat3_to_text(
     edat_path: str | Path,
     dst_path: str | Path | None = None,
     format: Literal["csv", "tsv"] = "csv",
-    return_dst_path: bool = True,
-) -> Path | None:
+) -> Path:
     """
     Converts a file with an "edat3" extension to a text file.
 
@@ -96,13 +95,10 @@ def convert_edat3_to_text(
     format : :obj:`Literal["csv", "tsv"], default="csv"
         The file extension.
 
-    return_dst_path : :obj:`bool`, default=True
-        Returns the destination path if True.
-
     Returns
     -------
-    Path or None
-        Returns the destination path if ``return_dst_path`` is True.
+    Path
+        Returns the destination path.
     """
     assert (
         Path(edat_path).suffix == ".edat3"
@@ -141,7 +137,7 @@ def convert_edat3_to_text(
 
     Path(tmpfile.name).unlink(missing_ok=True)
 
-    return Path(dst_path) if return_dst_path else None
+    return Path(dst_path)
 
 
 def _is_float(value: str) -> bool:

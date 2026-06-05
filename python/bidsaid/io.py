@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 from bidsaid._helpers import is_path
 from bidsaid.logging import setup_logger
-from bidsaid._rust import compress_nifti_image
+from bidsaid._rust import compress_file
 
 LGR = setup_logger(__name__)
 
@@ -46,9 +46,8 @@ def compress_image(
     nifti_file: str | Path,
     dst_dir: str | Path | None = None,
     remove_src_file: bool = False,
-    return_dst_file: bool = False,
     compression_level: int = 6,
-) -> Path | None:
+) -> Path:
     """
     Compresses a ".nii" image to a ".nii.gz" image.
 
@@ -64,28 +63,23 @@ def compress_image(
     remove_src_file : :obj:`bool`, default=False
         Deletes the original source image file.
 
-    return_dst_file : :obj:`bool`, default=False
-        Return the path to the compressed file.
-
     compression_level : :obj:`int`, default=6
         Level of compression from 0 to 9. Higher levels are slower but
         produce smaller file sizes.
 
     Returns
     -------
-    Path or None
-        Path to compressed file if ``return_dst_file`` is True else None.
+    Path
+        Path to compressed file.
     """
     nifti_file = Path(nifti_file)
     dst_dir = Path(dst_dir) if dst_dir else nifti_file.parent
 
     dst_file = dst_dir / str(nifti_file.name).replace(".nii", ".nii.gz")
 
-    compress_nifti_image(
-        str(nifti_file), str(dst_file), compression_level, remove_src_file
-    )
+    compress_file(str(nifti_file), str(dst_file), compression_level, remove_src_file)
 
-    return dst_file if return_dst_file else None
+    return dst_file
 
 
 def regex_glob(
