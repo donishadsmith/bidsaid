@@ -5,7 +5,7 @@ Documentation of changes for each version of ``BIDS-Aid``.
 **Currently doesn't follow semantic versioning.**
 
 ## [0.27.0] - 2026-06-04
-- Removes return_path parameters
+- Removes return_some_path parameters from functions
 
 ## [0.26.0] - 2026-06-03
 - Compression logic in ``compress_image`` is now implemented in Rust
