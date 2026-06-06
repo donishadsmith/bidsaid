@@ -19,9 +19,6 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Install precommit
         run: |
           pip install pre-commit
