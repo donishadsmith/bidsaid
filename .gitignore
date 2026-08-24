@@ -8,3 +8,4 @@ bidsaid.egg-info
 target/
 *.pdb
 *.pyd
+*.lock
