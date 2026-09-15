@@ -1038,7 +1038,7 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
 
         return block_df
 
-    def _extract_rts_and_responses(
+    def _extract_reaction_times_and_responses(
         self,
         block_df: pd.DataFrame,
     ) -> tuple[list[float], list[str]]:
@@ -1147,31 +1147,34 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
         for block_start_index in self.starting_block_indices:
             block_name = self.df.loc[block_start_index, self.trial_column_name]
             block_df = self._get_block_trials(block_start_index, response_trial_names)
-            reaction_times, responses = self._extract_rts_and_responses(block_df)
+            reaction_times, responses = self._extract_reaction_times_and_responses(
+                block_df
+            )
 
             if response_type == "all":
                 if response_map is not None:
                     reaction_times = [
-                        rt
-                        for rt, resp in zip(reaction_times, responses)
-                        if not np.isnan(float(response_map.get(resp, float("nan"))))
+                        reaction_time
+                        for reaction_time, response in zip(reaction_times, responses)
+                        if not np.isnan(float(response_map.get(response, float("nan"))))
                     ]
 
-                mean_rt = (
+                mean_reaction_time = (
                     np.nanmean(reaction_times)
                     if len(reaction_times) > 0 and not np.all(np.isnan(reaction_times))
                     else np.nan
                 )
             else:
                 target_correctness = 1 if response_type == "correct" else 0
-                filtered_rts = [
+                filtered_reaction_times = [
                     rt
                     for rt, resp in zip(reaction_times, responses)
                     if response_map.get(resp) == target_correctness
                 ]
-                mean_rt = (
-                    np.nanmean(filtered_rts)
-                    if len(filtered_rts) > 0 and not np.all(np.isnan(filtered_rts))
+                mean_reaction_time = (
+                    np.nanmean(filtered_reaction_times)
+                    if len(filtered_reaction_times) > 0
+                    and not np.all(np.isnan(filtered_reaction_times))
                     else np.nan
                 )
 
@@ -1181,9 +1184,9 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
                 self.unsplit_trial_types,
             )
             if should_separate_block and not self.drop_cue_rows:
-                mean_reaction_times.extend([np.nan, mean_rt])
+                mean_reaction_times.extend([np.nan, mean_reaction_time])
             else:
-                mean_reaction_times.append(mean_rt)
+                mean_reaction_times.append(mean_reaction_time)
 
         return mean_reaction_times
 
@@ -1234,7 +1237,7 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
         for block_start_index in self.starting_block_indices:
             block_name = self.df.loc[block_start_index, self.trial_column_name]
             block_df = self._get_block_trials(block_start_index, response_trial_names)
-            _, responses = self._extract_rts_and_responses(block_df)
+            _, responses = self._extract_reaction_times_and_responses(block_df)
 
             converted_responses = [float(response_map[resp]) for resp in responses]
 
@@ -1294,7 +1297,9 @@ class PresentationBlockExtractor(PresentationExtractor, BlockExtractor):
         for block_start_index in self.starting_block_indices:
             block_name = self.df.loc[block_start_index, self.trial_column_name]
             block_df = self._get_block_trials(block_start_index, response_trial_names)
-            reaction_times, responses = self._extract_rts_and_responses(block_df)
+            reaction_times, responses = self._extract_reaction_times_and_responses(
+                block_df
+            )
 
             if response_map is not None:
                 count = sum(
@@ -2211,25 +2216,29 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
             filtered ``block_df``.
         """
 
-        subject_resp = block_df[subject_response_column].apply(
+        subject_response = block_df[subject_response_column].apply(
             lambda x: float(x) if _is_float(x) else x
         )
-        correct_resp = block_df[correct_response_column].apply(
+        correct_response = block_df[correct_response_column].apply(
             lambda x: float(x) if _is_float(x) else x
         )
 
         if response_required_only:
-            block_df = block_df[~correct_resp.isna()]
-            subject_resp = subject_resp[~correct_resp.isna()]
-            correct_resp = correct_resp[~correct_resp.isna()]
+            block_df = block_df[~correct_response.isna()]
+            subject_response = subject_response[~correct_response.isna()]
+            correct_response = correct_response[~correct_response.isna()]
 
         if valid_correct_responses:
-            block_df = block_df[correct_resp.isin(valid_correct_responses)]
-            subject_resp = subject_resp[correct_resp.isin(valid_correct_responses)]
-            correct_resp = correct_resp[correct_resp.isin(valid_correct_responses)]
+            block_df = block_df[correct_response.isin(valid_correct_responses)]
+            subject_response = subject_response[
+                correct_response.isin(valid_correct_responses)
+            ]
+            correct_response = correct_response[
+                correct_response.isin(valid_correct_responses)
+            ]
 
-        both_nan = subject_resp.isna() & correct_resp.isna()
-        both_equal = subject_resp == correct_resp
+        both_nan = subject_response.isna() & correct_response.isna()
+        both_equal = subject_response == correct_response
 
         return both_nan | both_equal, block_df
 
@@ -2379,10 +2388,10 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
                 if valid_correct_responses:
                     block_df = block_df[correct_response.isin(valid_correct_responses)]
 
-                rts = block_df[reaction_time_column_name].replace(0, np.nan)
+                reaction_times = block_df[reaction_time_column_name].replace(0, np.nan)
                 mean_rt = (
-                    np.nanmean(rts)
-                    if rts.size > 0 and not np.all(np.isnan(rts))
+                    np.nanmean(reaction_times)
+                    if reaction_times.size > 0 and not np.all(np.isnan(reaction_times))
                     else np.nan
                 )
             else:
@@ -2395,13 +2404,14 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
                 )
 
                 if not correctness.empty:
-                    filtered_rts = block_df.loc[
+                    filtered_reaction_times = block_df.loc[
                         correctness == (response_type == "correct"),
                         reaction_time_column_name,
                     ]
                     mean_rt = (
-                        np.nanmean(filtered_rts)
-                        if filtered_rts.size > 0 and not np.all(np.isnan(filtered_rts))
+                        np.nanmean(filtered_reaction_times)
+                        if filtered_reaction_times.size > 0
+                        and not np.all(np.isnan(filtered_reaction_times))
                         else np.nan
                     )
                 else:
@@ -2614,8 +2624,8 @@ class EPrimeBlockExtractor(EPrimeExtractor, BlockExtractor):
                 )
                 block_df = block_df[correct_response.isin(valid_correct_responses)]
 
-            rts = block_df[reaction_time_column_name].replace(0, np.nan)
-            count = rts.notna().sum()
+            reaction_times = block_df[reaction_time_column_name].replace(0, np.nan)
+            count = reaction_times.notna().sum()
 
             should_separate_block = _should_split_cue(
                 self.split_cue_from_block,
@@ -2883,14 +2893,14 @@ class EPrimeEventExtractor(EPrimeExtractor, EventExtractor):
 
         Example
         -------
-        >>> rts = extractor.extract_reaction_times("Stimulus.RT")
+        >>> reaction_times = extractor.extract_reaction_times("Stimulus.RT")
         >>> responses = extractor.extract_accuracies(
         ...     subject_response_column="Stimulus.RESP",
         ...     correct_response_column="Stimulus.CRESP",
         ... )
         >>> # Filter to only correct Go trials:
-        >>> df = pd.DataFrame({"rt": rts, "trial_type": trial_types, "response": responses})
-        >>> correct_go_rts = df[(df["trial_type"] == "Go") & (df["response"] == 1)]["rt"]
+        >>> df = pd.DataFrame({"reaction_time": reaction_times, "trial_type": trial_types, "response": responses})
+        >>> correct_go_reaction_times = df[(df["trial_type"] == "Go") & (df["response"] == 1)]["reaction_times"]
         """
         return [
             self.df.loc[index, reaction_time_column_name]
@@ -2954,23 +2964,27 @@ class EPrimeEventExtractor(EPrimeExtractor, EventExtractor):
             valid_correct_responses = _sanitize_list(valid_correct_responses)
 
         for row_indx in self.event_trial_indices:
-            subject_resp = self.df.loc[row_indx, subject_response_column]
-            correct_resp = self.df.loc[row_indx, correct_response_column]
+            subject_response = self.df.loc[row_indx, subject_response_column]
+            correct_response = self.df.loc[row_indx, correct_response_column]
 
-            subject_resp = (
-                float(subject_resp) if _is_float(subject_resp) else subject_resp
+            subject_response = (
+                float(subject_response)
+                if _is_float(subject_response)
+                else subject_response
             )
-            correct_resp = (
-                float(correct_resp) if _is_float(correct_resp) else correct_resp
+            correct_response = (
+                float(correct_response)
+                if _is_float(correct_response)
+                else correct_response
             )
 
-            both_nan = pd.isna(subject_resp) and pd.isna(correct_resp)
-            both_equal = subject_resp == correct_resp
+            both_nan = pd.isna(subject_response) and pd.isna(correct_response)
+            both_equal = subject_response == correct_response
 
             if valid_correct_responses:
-                is_valid_target = correct_resp in valid_correct_responses
+                is_valid_target = correct_response in valid_correct_responses
             else:
-                is_valid_target = not pd.isna(correct_resp)
+                is_valid_target = not pd.isna(correct_response)
 
             if response_required_only and not is_valid_target:
                 response = np.nan
