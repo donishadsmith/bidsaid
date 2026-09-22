@@ -157,7 +157,7 @@ def compute_uncompressed_image_size(nifti_file: str | Path) -> int:
     hdr = get_nifti_header(nifti_file)
 
     if nifti_file.suffix.lower() != ".gz":
-        return nifti_file.stat().st_size()
+        return nifti_file.stat().st_size
 
     total_bytes = 0
     with gzip.open(nifti_file, "rb") as f:
