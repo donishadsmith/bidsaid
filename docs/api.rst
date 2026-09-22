@@ -81,6 +81,8 @@ Module for input/output operations on NIfTI files and images.
    get_nifti_header
    get_nifti_affine
    replace_ext
+   compute_uncompressed_image_size
+   truncate_nifti_to_complete_volumes
 
 :mod:`bidsaid.path_utils`
 --------------------------
