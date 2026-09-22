@@ -199,8 +199,7 @@ def is_nifti_truncated(nifti_file: str | Path) -> bool:
     if actual_data_bytes < expected_data_bytes:
         LGR.warning(
             f"Truncated NIfTI: {nifti_file} header expects {expected_data_bytes} data bytes "
-            f"({n_voxels} voxels * {bytes_per_voxel} bytes) after offset {offset}, "
-            f"but only {actual_data_bytes} are present."
+            f"({n_voxels} voxels * {bytes_per_voxel} bytes) but only {actual_data_bytes} are present."
         )
         return True
     else:
