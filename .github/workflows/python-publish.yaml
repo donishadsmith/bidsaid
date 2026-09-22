@@ -30,7 +30,7 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist
           manylinux: auto
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.runner }}-${{ matrix.target }}
           path: dist
@@ -45,7 +45,7 @@ jobs:
         with:
           command: sdist
           args: --out dist
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-sdist
           path: dist
@@ -57,7 +57,7 @@ jobs:
       permissions:
         contents: write
       steps:
-        - uses: actions/download-artifact@v7
+        - uses: actions/download-artifact@v8
           with:
             path: dist
             merge-multiple: true
