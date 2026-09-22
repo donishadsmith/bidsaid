@@ -9,6 +9,6 @@ name = "_rust"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.28.3", features = ["abi3-py310"] }
+pyo3 = { version = "0.29.0", features = ["abi3-py310"] }
 flate2 = "1.1.9"
 gzp = {version = "2.0.2", default-features = false, features = ["deflate_rust"] }
