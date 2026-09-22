@@ -1,6 +1,6 @@
 """Module for input/output operations."""
 
-import shutil, re
+import gzip, shutil, re, math
 from pathlib import Path
 from typing import Iterator
 
@@ -101,7 +101,6 @@ def regex_glob(
         (i.e., sub-101.log) and nested directories (i.e. logs/sub-101.log). If
         False, regex pattern is only applied to content in the top-level directory.
 
-
     Yields
     ------
     Path
@@ -140,6 +139,34 @@ def get_nifti_header(
     return load_nifti(nifti_file_or_img).header
 
 
+def compute_uncompressed_image_size(nifti_file: str | Path) -> int:
+    """
+    Compute Uncompressed NiFTI Image Size
+
+    Parameters
+    ----------
+    nifti_file: :obj:`str` or :obj:`Path`
+        Path to the NIfTI file or a NIfTI image.
+
+    Return
+    ------
+    The total number of bytes in the image.
+    """
+    nifti_file = Path(nifti_file)
+
+    hdr = get_nifti_header(nifti_file)
+
+    if nifti_file.suffix.lower() != ".gz":
+        return nifti_file.stat().st_size()
+
+    total_bytes = 0
+    with gzip.open(nifti_file, "rb") as f:
+        while chunk := f.read(1024 * 1024):
+            total_bytes += len(chunk)
+
+        return total_bytes - int(hdr.get_data_offset())
+
+
 def is_nifti_truncated(nifti_file: str | Path) -> bool:
     """
     Checks expected byte size and actual byte size of uncompressed NIfTI images.
@@ -167,8 +194,7 @@ def is_nifti_truncated(nifti_file: str | Path) -> bool:
     bytes_per_voxel = hdr.get_data_dtype().itemsize
     expected_data_bytes = n_voxels * bytes_per_voxel
 
-    offset = int(hdr.get_data_offset())
-    actual_data_bytes = nifti_file.stat().st_size - offset
+    actual_data_bytes = compute_uncompressed_image_size(nifti_file)
 
     if actual_data_bytes < expected_data_bytes:
         LGR.warning(
@@ -252,6 +278,51 @@ def replace_ext(filename: str | Path, new_ext: str) -> Path:
     return Path(str(filename).replace(old_ext, new_ext))
 
 
+def truncate_nifti_to_complete_volumes(
+    nifti_file: str | Path, new_nifti_filename: str | Path | None = None
+):
+    """
+    Truncate NiFTI File to Complete Volumes
+
+    Computes the total number of bytes available in the file and truncates the
+    file size based on the following equation:
+
+    ```
+        bytes_per_volume = math.prod(img.shape[:3]) * img.get_data_dtype().itemsize
+        n_volumes_retained = min(img.shape[3], available_bytes // bytes_per_volume)
+    ```
+
+    Parameters
+    ----------
+    nifti_file: :obj:`str` or :obj:`Path`
+        Path to the NIfTI file or a NIfTI image.
+
+    new_nifti_filename: :obj:`str` or :obj:`Path`, default = None
+        The new filename for to save the truncated NIfTI image. If None, then the original NIfTI file
+        is overwritten with the truncated one.
+    """
+    nifti_img = nib.load(nifti_file)
+
+    available_bytes = compute_uncompressed_image_size(nifti_file)
+    bytes_per_volume = (
+        math.prod(nifti_img.shape[:3]) * nifti_img.get_data_dtype().itemsize
+    )
+    n_volumes_retained = min(nifti_img.shape[3], available_bytes // bytes_per_volume)
+
+    if n_volumes_retained < 1.0:
+        LGR.warning(f"Percentage of volumes kept: {n_volumes_retained}")
+
+        truncated_image = nifti_img.slicer[..., :n_volumes_retained]
+
+        if new_nifti_filename:
+            new_nifti_filename = Path(new_nifti_filename)
+            new_nifti_filename.parent.mkdir(parents=True, exists_ok=True)
+
+        nifti_filename = new_nifti_filename if new_nifti_filename else nifti_file
+
+        nib.save(truncated_image, nifti_filename)
+
+
 __all__ = [
     "load_nifti",
     "compress_image",
@@ -260,4 +331,6 @@ __all__ = [
     "get_nifti_header",
     "get_nifti_affine",
     "replace_ext",
+    "compute_uncompressed_image_size",
+    "truncate_nifti_to_complete_volumes",
 ]
