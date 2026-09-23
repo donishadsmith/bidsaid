@@ -308,14 +308,14 @@ def truncate_nifti_to_complete_volumes(
     )
     n_volumes_retained = min(nifti_img.shape[3], available_bytes // bytes_per_volume)
 
-    if n_volumes_retained < 1.0:
+    if n_volumes_retained < nifti_img.shape[3]:
         LGR.warning(f"Percentage of volumes kept: {n_volumes_retained}")
 
         truncated_image = nifti_img.slicer[..., :n_volumes_retained]
 
         if new_nifti_filename:
             new_nifti_filename = Path(new_nifti_filename)
-            new_nifti_filename.parent.mkdir(parents=True, exists_ok=True)
+            new_nifti_filename.parent.mkdir(parents=True, exist_ok=True)
 
         nifti_filename = new_nifti_filename if new_nifti_filename else nifti_file
 

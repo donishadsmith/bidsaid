@@ -70,3 +70,26 @@ def test_compress_image(nifti_img_and_path):
     assert compressed_img.shape == img.shape
     np.testing.assert_array_equal(compressed_img.get_fdata(), img.get_fdata())
     assert bids_io.get_nifti_header(compressed_img) == bids_io.get_nifti_header(img)
+
+
+def test_truncate_nifti_to_complete_volumes(nifti_img_and_path):
+    """Test for ``truncate_nifti_to_complete_volumes``."""
+    img, img_path = nifti_img_and_path
+
+    bytes_per_volume = (
+        img.shape[0] * img.shape[1] * img.shape[2] * img.get_data_dtype().itemsize
+    )
+    data = img_path.read_bytes()
+    truncated_path = img_path.parent / "truncated.nii"
+    truncated_path.write_bytes(data[: -int(1.5 * bytes_per_volume)])
+    assert bids_io.is_nifti_truncated(truncated_path) is True
+
+    new_path = img_path.parent / "fixed" / "fixed.nii"
+    bids_io.truncate_nifti_to_complete_volumes(truncated_path, new_path)
+    fixed_img = bids_io.load_nifti(new_path)
+    assert fixed_img.shape == (*img.shape[:3], 3)
+    assert bids_io.is_nifti_truncated(new_path) is False
+
+    bids_io.truncate_nifti_to_complete_volumes(truncated_path)
+    assert bids_io.load_nifti(truncated_path).shape == (*img.shape[:3], 3)
+    assert bids_io.is_nifti_truncated(truncated_path) is False
