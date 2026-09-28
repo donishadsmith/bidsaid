@@ -12,6 +12,8 @@ from bidsaid.qc import (
     compute_global_signal,
     create_spike_regressors,
     get_n_censored_volumes,
+    downsample_img,
+    upsample_img,
 )
 
 
@@ -165,3 +167,26 @@ def test_get_n_censored_volumes(tmp_dir):
     file = Path(tmp_dir.name) / "cens.1D"
     np.savetxt(file, arr)
     assert get_n_censored_volumes(file) == 2
+
+
+def test_interpolation(nifti_img_and_path):
+    import numpy as np
+
+    """Test for ``upsample_img`` and ``downsample_img``"""
+    img, _ = nifti_img_and_path
+
+    upsampled_image = upsample_img(img, 2)
+    # should be 4 gaps, 2 new frames = 8 + 5 original frames = 13
+    # tr = 1 / (2 + 1)
+    assert upsampled_image.shape[-1] == 13
+    np.testing.assert_allclose(
+        upsampled_image.header.get_zooms()[-1], 0.33333, rtol=1e-4
+    )
+
+    downsampled_image = downsample_img(upsampled_image, 2)
+    assert downsampled_image.shape[-1] == 5
+    np.testing.assert_allclose(
+        downsampled_image.header.get_zooms()[-1], 0.99
+    )  # close enough
+
+    np.testing.assert_allclose(img.get_fdata(), downsampled_image.get_fdata())

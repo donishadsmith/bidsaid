@@ -3,5 +3,5 @@
     "extends": ["config:recommended", "schedule:earlyMondays"],
     "packageRules": [{"matchPackageNames": ["*"], "automerge": false}],
     "prConcurrentLimit": 2,
-    "prHourlyLimit": 0
+    "prHourlyLimit": 0,
 }

@@ -165,6 +165,10 @@ Module for quality control metrics and assessment of fMRI data.
    create_spike_regressors
    get_n_censored_volumes
    compute_global_signal
+   downsample_img
+   upsample_img
+   downsample_array
+   upsample_array
 
 :mod:`bidsaid.simulate`
 --------------------------

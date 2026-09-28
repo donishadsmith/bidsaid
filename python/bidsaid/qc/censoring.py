@@ -401,3 +401,14 @@ def get_n_censored_volumes(arr_or_file: str | Path | NDArray) -> int:
     arr = arr.astype(int)
 
     return arr[arr == 0].size
+
+
+__all__ = [
+    "compute_n_dummy_scans",
+    "compute_framewise_displacement",
+    "create_censor_mask",
+    "merge_censor_masks",
+    "compute_consecutive_censor_stats",
+    "create_spike_regressors",
+    "get_n_censored_volumes",
+]

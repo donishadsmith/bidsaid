@@ -48,3 +48,6 @@ def compute_global_signal(
         "global_signal": global_signal,
         "global_signal_percent_change": global_signal_pct,
     }
+
+
+__all__ = ["compute_global_signal"]
