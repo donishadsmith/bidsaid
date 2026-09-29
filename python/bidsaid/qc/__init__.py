@@ -10,4 +10,9 @@ from .censoring import (
     get_n_censored_volumes,
 )
 from .nuisance import compute_global_signal
-from .interpolate import downsample_img, upsample_img
+from .interpolate import (
+    downsample_img,
+    upsample_img,
+    interpolate_censored_array,
+    interpolate_censored_img,
+)

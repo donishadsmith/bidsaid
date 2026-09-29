@@ -169,6 +169,8 @@ Module for quality control metrics and assessment of fMRI data.
    upsample_img
    downsample_array
    upsample_array
+   interpolate_censored_array
+   interpolate_censored_img
 
 :mod:`bidsaid.simulate`
 --------------------------

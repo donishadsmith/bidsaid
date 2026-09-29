@@ -14,6 +14,7 @@ from bidsaid.qc import (
     get_n_censored_volumes,
     downsample_img,
     upsample_img,
+    interpolate_censored_img,
 )
 
 
@@ -190,3 +191,35 @@ def test_interpolation(nifti_img_and_path):
     )  # close enough
 
     np.testing.assert_allclose(img.get_fdata(), downsampled_image.get_fdata())
+
+
+def test_interpolate_censored_img(tmp_dir, nifti_img_and_path):
+    """Test for ``interpolate_censored_img``"""
+    from scipy.interpolate import CubicSpline
+
+    img, _ = nifti_img_and_path
+    img_data = img.get_fdata()
+
+    censor_mask = np.array([1, 0, 1, 1, 0])
+    interpolated_img = interpolate_censored_img(img, censor_mask)
+    interpolated_data = interpolated_img.get_fdata()
+
+    assert interpolated_img.shape == img.shape
+    np.testing.assert_allclose(
+        interpolated_img.header.get_zooms()[-1], img.header.get_zooms()[-1]
+    )
+
+    retained_timepoints = np.flatnonzero(censor_mask)
+    np.testing.assert_allclose(
+        interpolated_data[..., retained_timepoints],
+        img_data[..., retained_timepoints],
+        rtol=1e-6,
+    )
+
+    expected_interior = CubicSpline(
+        retained_timepoints, img_data[..., retained_timepoints], axis=-1
+    )(1)
+    np.testing.assert_allclose(
+        interpolated_data[..., 1], expected_interior, rtol=1e-4, atol=1e-4
+    )
+    np.testing.assert_allclose(interpolated_data[..., 4], img_data[..., 3], rtol=1e-6)

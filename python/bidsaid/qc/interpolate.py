@@ -47,7 +47,7 @@ def upsample_array(
         The interpolation method to use ("cubic" for cublic spline and "pcip" for shape-preserving cubic).
 
     chunk_size : :obj:`int`, default=20000
-        The number of voxels or vertices interpolated at once. Lower values reduce memory use.
+        The number of voxels or vertices interpolated at once.
 
     Returns
     -------
@@ -109,6 +109,94 @@ def downsample_array(
     slicer[axis] = slice(None, None, n + 1)
 
     return array[tuple(slicer)]
+
+
+def interpolate_censored_array(
+    array: NDArray[np.floating],
+    censor_mask: str | Path | NDArray,
+    axis: int = -1,
+    method: Literal["cubic", "pchip"] = "cubic",
+    chunk_size: int = 20000,
+) -> NDArray[np.floating]:
+    """
+    Interpolate Censored Timepoints in an Array.
+
+    Replaces censored timepoints (0 in ``censor_mask``) with values interpolated from the
+    retained timepoints (1 in ``censor_mask``) along ``axis``.
+
+    .. important::
+        Censored timepoints before the first or after the last retained timepoint (e.g. dummy scans)
+        use the value of the nearest retained volume instead of interpolating
+
+    Parameters
+    ----------
+    array : :obj:`NDArray[np.floating]`
+        The data to interpolate (e.g. a 4D volume array or a 2D vertices x time surface array).
+
+    censor_mask : :obj:`str`, :obj:`Path`, or :obj:`NDArray`
+        A 1D binary mask or a path to a text file containing the mask, where 1 indicates
+        timepoints to keep and 0 indicates timepoints to interpolate. Must have the same length
+        as ``axis``.
+
+    axis : :obj:`int`, default=-1
+        The dimension containing the timepoints.
+
+    method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
+        The interpolation method to use ("cubic" for cubic spline and "pchip" for
+        shape-preserving cubic).
+
+    chunk_size : :obj:`int`, default=20000
+        The number of voxels or vertices interpolated at once.
+
+    Returns
+    -------
+    NDArray[np.floating]
+        The array with censored timepoints replaced by interpolated values, with the same
+        dimensions as ``array``.
+    """
+    assert method in ["cubic", "pchip"], "method must be 'cubic' or 'pchip'"
+
+    censor_mask = (
+        np.loadtxt(censor_mask)
+        if isinstance(censor_mask, (str, Path))
+        else np.asarray(censor_mask)
+    ).astype(bool)
+    array = np.moveaxis(array, axis, -1)
+    n_timepoints = array.shape[-1]
+    assert (
+        censor_mask.size == n_timepoints
+    ), f"censor_mask has {censor_mask.size} values but the array has {n_timepoints} timepoints"
+
+    retained_timepoints = np.flatnonzero(censor_mask)
+    censored_timepoints = np.flatnonzero(~censor_mask)
+    out_array = array.astype(np.result_type(array.dtype, np.float32), copy=True)
+
+    first_retained_timepoint, last_retained_timepoint = (
+        retained_timepoints[0],
+        retained_timepoints[-1],
+    )
+    is_interior_timepoint = (censored_timepoints > first_retained_timepoint) & (
+        censored_timepoints < last_retained_timepoint
+    )
+    target_timepoints = censored_timepoints[is_interior_timepoint]
+
+    flat_array = array.reshape(-1, n_timepoints)
+    flat_out_array = out_array.reshape(-1, n_timepoints)
+    interpolator = _INTERPOLATORS[method]
+    for index in range(0, flat_array.shape[0], chunk_size):
+        chunk = flat_array[index : index + chunk_size, retained_timepoints]
+        flat_out_array[index : index + chunk_size, target_timepoints] = interpolator(
+            retained_timepoints, chunk, axis=-1
+        )(target_timepoints)
+
+    flat_out_array[
+        :, censored_timepoints[censored_timepoints < first_retained_timepoint]
+    ] = flat_array[:, [first_retained_timepoint]]
+    flat_out_array[
+        :, censored_timepoints[censored_timepoints > last_retained_timepoint]
+    ] = flat_array[:, [last_retained_timepoint]]
+
+    return np.moveaxis(flat_out_array.reshape(out_array.shape), -1, axis)
 
 
 def _create_hdr(
@@ -202,4 +290,60 @@ def downsample_img(
     )
 
 
-__all__ = ["downsample_array", "downsample_img", "upsample_array", "upsample_img"]
+def interpolate_censored_img(
+    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    censor_mask: str | Path | NDArray,
+    method: Literal["cubic", "pchip"] = "cubic",
+    chunk_size: int = 20000,
+) -> nib.nifti1.Nifti1Image:
+    """
+    Interpolate Censored Volumes in a NIfTI Image.
+
+    Replaces censored volumes (0 in ``censor_mask``) with values interpolated from the retained
+    volumes (1 in ``censor_mask``).
+
+    .. important::
+        Censored timepoints before the first or after the last retained timepoint (e.g. dummy scans)
+        use the value of the nearest retained volume instead of interpolating
+
+    Parameters
+    ----------
+    nifti_file_or_img : :obj:`str`, :obj:`Path`, or :obj:`Nifti1Image`
+        Path to the functional NIfTI file or a functional NIfTI image.
+
+    censor_mask : :obj:`str`, :obj:`Path`, or :obj:`NDArray`
+        A 1D binary mask or a path to a text file containing the mask, where 1 indicates
+        volumes to keep and 0 indicates volumes to interpolate.
+
+    method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
+        The interpolation method to use ("cubic" for cubic spline and "pchip" for
+        shape-preserving cubic).
+
+    chunk_size : :obj:`int`, default=20000
+        The number of voxels interpolated at once.
+
+    Returns
+    -------
+    Nifti1Image
+        The NIfTI image with censored volumes replaced by interpolated values.
+    """
+    nifti_img = load_nifti(nifti_file_or_img)
+    img_data = np.asanyarray(nifti_img.dataobj, dtype=np.float32)
+    interpolated_img_fdata = interpolate_censored_array(
+        img_data, censor_mask, -1, method, chunk_size
+    )
+
+    hdr = nifti_img.header.copy()
+    hdr.set_data_dtype(interpolated_img_fdata.dtype)
+
+    return nib.Nifti1Image(interpolated_img_fdata, nifti_img.affine, hdr)
+
+
+__all__ = [
+    "downsample_array",
+    "downsample_img",
+    "interpolate_censored_array",
+    "interpolate_censored_img",
+    "upsample_array",
+    "upsample_img",
+]
