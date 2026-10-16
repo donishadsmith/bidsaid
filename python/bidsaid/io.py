@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 from bidsaid._helpers import is_path
 from bidsaid.logging import setup_logger
-from bidsaid._rust import compress_file
+from bidsaid._rust import compress_file, count_file_bytes
 
 LGR = setup_logger(__name__)
 
@@ -159,12 +159,7 @@ def compute_uncompressed_image_size(nifti_file: str | Path) -> int:
     if nifti_file.suffix.lower() != ".gz":
         return nifti_file.stat().st_size
 
-    total_bytes = 0
-    with gzip.open(nifti_file, "rb") as f:
-        while chunk := f.read(1024 * 1024):
-            total_bytes += len(chunk)
-
-        return total_bytes - int(hdr.get_data_offset())
+    count_file_bytes(nifti_file) - int(hdr.get_data_offset())
 
 
 def is_nifti_truncated(nifti_file: str | Path) -> bool:
