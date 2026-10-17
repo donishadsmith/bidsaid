@@ -56,6 +56,14 @@ def test_surface_renderer_updates_data(renderer, sphere_surfaces):
     )
     second_blank_frame = renderer.render(np.full(n_left, np.nan), None)
 
+    diff = np.abs(blank_frame.astype(np.int16) - second_blank_frame.astype(np.int16))
+    n_bad = np.count_nonzero(diff.any(axis=-1))
+    print(
+        f"{n_bad} / {diff.shape[0] * diff.shape[1]} pixels differ, max diff {diff.max()}"
+    )
+    ys, xs = np.nonzero(diff.any(axis=-1))
+    print("bbox:", ys.min(), ys.max(), xs.min(), xs.max())
+
     assert not np.array_equal(blank_frame, full_frame)
     assert not np.array_equal(full_frame, half_frame)
     assert np.array_equal(blank_frame, second_blank_frame)
