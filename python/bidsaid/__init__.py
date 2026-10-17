@@ -9,6 +9,8 @@ Submodules
 ----------
 audit -- Contains the ``BIDSAuditor`` class to check for certain file availability
 
+cli -- Helpers for building command-line interfaces with ``argparse``
+
 files -- Operations related to initializing and creating BIDS compliant files
 
 events -- Contains classes to extract timing information from Presentation or E-Prime logs
@@ -28,6 +30,10 @@ path_utils -- Utilities related to parsing or sorting filenames
 qc -- Quality control utilities for fMRI data (motion censoring, framewise displacement, etc.)
 
 simulate -- Simulate a basic NIfTI image or BIDS dataset for testing purposes
+
+surface -- Project volumetric data onto cortical surfaces and fetch fsaverage surfaces
+
+visual -- Render surface data as images for movies (requires ``pip install bidsaid[visual]``)
 """
 
 __version__ = version("bidsaid")

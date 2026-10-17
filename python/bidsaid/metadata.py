@@ -1,13 +1,12 @@
 """Utility functions to extract or create metadata."""
 
-from pathlib import Path
 from typing import Any, Iterable, Literal
 
 import nibabel as nib, numpy as np
 
 from ._exceptions import SliceAxisError, DataDimensionError
 from ._decorators import check_all_none, check_nifti
-from .io import load_nifti, get_nifti_header, get_nifti_affine
+from .io import load_nifti, get_nifti_header, get_nifti_affine, NiftiFileorImage
 from .logging import setup_logger
 
 LGR = setup_logger(__name__)
@@ -16,8 +15,8 @@ _VOXEL_INDX_DICT = {"i": 0, "j": 1, "k": 2}
 
 
 def needs_resampling(
-    source_file_or_img: str | Path | nib.nifti1.Nifti1Image,
-    target_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    source_file_or_img: NiftiFileorImage,
+    target_file_or_img: NiftiFileorImage,
 ) -> bool:
     """
     Determines if a source image needs to be resampled.
@@ -47,7 +46,7 @@ def needs_resampling(
 
 @check_all_none(parameter_names=["nifti_file_or_img", "nifti_header"])
 def determine_slice_axis(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image | None = None,
+    nifti_file_or_img: NiftiFileorImage | None = None,
     nifti_header: nib.nifti1.Nifti1Header | None = None,
 ) -> int:
     """
@@ -104,7 +103,7 @@ def _to_native_numeric(value: np.floating | np.int_) -> float | int:
 @check_all_none(parameter_names=["nifti_file_or_img", "nifti_header"])
 def get_hdr_metadata(
     metadata_name: str,
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image | None = None,
+    nifti_file_or_img: NiftiFileorImage | None = None,
     nifti_header: nib.nifti1.Nifti1Header | None = None,
     return_header: bool = False,
 ) -> Any | tuple[Any, nib.nifti1.Nifti1Header]:
@@ -146,7 +145,7 @@ def get_hdr_metadata(
     return metadata_value if not return_header else (metadata_value, hdr)
 
 
-def get_n_volumes(nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image) -> int:
+def get_n_volumes(nifti_file_or_img: NiftiFileorImage) -> int:
     """
     Get the number of volumes from a 4D NIftI image.
 
@@ -169,7 +168,7 @@ def get_n_volumes(nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image) -> int
 
 
 def get_image_orientation(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
 ) -> tuple[dict[str, str], tuple[str, str, str]]:
     """
     Get the image orientation.
@@ -224,7 +223,7 @@ def get_image_orientation(
 
 
 def direction_to_voxel_axis(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
     anatomical_directions: Iterable[str],
 ) -> tuple[str, int]:
     """
@@ -262,7 +261,7 @@ def direction_to_voxel_axis(
 
 
 def get_n_slices(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
     slice_axis: Literal["i", "j", "k"] | None = None,
     verbose: bool = False,
 ) -> int:
@@ -311,9 +310,7 @@ def get_n_slices(
     return _to_native_numeric(n_slices)
 
 
-def get_tr(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image, verbose: bool = False
-) -> float:
+def get_tr(nifti_file_or_img: NiftiFileorImage, verbose: bool = False) -> float:
     """
     Get the repetition time from the header of a NIfTI image.
 
@@ -670,7 +667,7 @@ def _create_multiband_timing(
 
 
 def create_slice_timing(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
     tr: float | int | None = None,
     slice_axis: Literal["i", "j", "k"] | None = None,
     slice_acquisition_method: Literal[
@@ -819,7 +816,7 @@ def create_slice_timing(
     )
 
 
-def is_3d_img(nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image) -> bool:
+def is_3d_img(nifti_file_or_img: NiftiFileorImage) -> bool:
     """
     Determines if ``nifti_file_or_img`` is a 3D image.
 
@@ -837,7 +834,7 @@ def is_3d_img(nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image) -> bool:
 
 
 def get_scanner_info(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
 ) -> tuple[str, str]:
     """
     Determines the manufacturer and model name of scanner.
@@ -873,7 +870,7 @@ def get_scanner_info(
 
 
 def infer_task_from_image(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
     task_volume_map: dict[str, int] | dict[int, str],
 ) -> str:
     """
@@ -914,7 +911,7 @@ def infer_task_from_image(
 
 @check_nifti()
 def get_recon_matrix_pe(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
     phase_encoding_axis: Literal["i", "j", "k"],
 ) -> int:
     """

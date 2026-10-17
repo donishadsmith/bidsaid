@@ -15,4 +15,5 @@ from .interpolate import (
     upsample_img,
     interpolate_censored_array,
     interpolate_censored_img,
+    compute_frame_timing,
 )

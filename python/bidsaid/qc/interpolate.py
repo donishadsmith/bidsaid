@@ -387,5 +387,5 @@ __all__ = [
     "interpolate_censored_img",
     "upsample_array",
     "upsample_img",
-    "compute_frame_timing"
+    "compute_frame_timing",
 ]

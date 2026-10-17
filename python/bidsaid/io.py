@@ -2,7 +2,7 @@
 
 import gzip, shutil, re, math
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, TypeAlias
 
 import nibabel as nib, numpy as np
 from numpy.typing import NDArray
@@ -13,9 +13,12 @@ from bidsaid._rust import compress_file, count_file_bytes
 
 LGR = setup_logger(__name__)
 
+NiftiFileorImage: TypeAlias = str | Path | nib.nifti1.Nifti1Image
+"""Path to the NIfTI file or a NIfTI image"""
+
 
 def load_nifti(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
 ) -> nib.nifti1.Nifti1Image:
     """
     Loads a NIfTI image.
@@ -121,7 +124,7 @@ def regex_glob(
 
 
 def get_nifti_header(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
+    nifti_file_or_img: NiftiFileorImage,
 ) -> nib.nifti1.Nifti1Header:
     """
     Get header from a NIfTI image.
@@ -201,7 +204,7 @@ def is_nifti_truncated(nifti_file: str | Path) -> bool:
         return False
 
 
-def get_nifti_affine(nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image) -> NDArray:
+def get_nifti_affine(nifti_file_or_img: NiftiFileorImage) -> NDArray:
     """
     Get the affine matrix from a NIfTI image.
 
@@ -327,4 +330,5 @@ __all__ = [
     "replace_ext",
     "compute_uncompressed_image_size",
     "truncate_nifti_to_complete_volumes",
+    "NiftiFileorImage",
 ]

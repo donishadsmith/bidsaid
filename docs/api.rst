@@ -13,6 +13,21 @@ Module for auditing directories.
 
    BIDSAuditor
 
+:mod:`bidsaid.cli`
+--------------------
+Module containing helpers for building command-line interfaces with ``argparse``.
+
+.. currentmodule:: bidsaid.cli
+
+.. autosummary::
+   :template: function.rst
+   :nosignatures:
+   :toctree: generated/
+
+   none_or
+   str_to_bool
+   n_dummy_type
+
 :mod:`bidsaid.files`
 ----------------------
 Module for initializing and creating BIDS compliant files.
@@ -171,6 +186,7 @@ Module for quality control metrics and assessment of fMRI data.
    upsample_array
    interpolate_censored_array
    interpolate_censored_img
+   compute_frame_timing
 
 :mod:`bidsaid.simulate`
 --------------------------
@@ -185,3 +201,41 @@ Module for simulating NIfTI images and BIDS datasets.
 
    simulate_nifti_image
    simulate_bids_dataset
+
+:mod:`bidsaid.surface`
+-------------------------
+Module for projecting volumetric data onto cortical surfaces. ``fetch_fsaverage_surfaces`` requires ``pip install bidsaid[surface]``
+
+.. currentmodule:: bidsaid.surface
+
+.. autosummary::
+   :template: function.rst
+   :nosignatures:
+   :toctree: generated/
+
+   fetch_fsaverage_surfaces
+   load_surface_mesh
+   load_surface_data
+   get_cortex_masks
+   project_to_surface
+
+:mod:`bidsaid.visual`
+------------------------
+Module for rendering surface data as images. Requires ``pip install bidsaid[visual]``.
+
+.. currentmodule:: bidsaid.visual
+
+.. autosummary::
+   :template: class.rst
+   :nosignatures:
+   :toctree: generated/
+
+   SurfaceRenderer
+
+.. autosummary::
+   :template: function.rst
+   :nosignatures:
+   :toctree: generated/
+
+   get_colormap
+   create_polydata
