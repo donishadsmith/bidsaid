@@ -62,7 +62,10 @@ def test_surface_renderer_updates_data(renderer, sphere_surfaces):
         f"{n_bad} / {diff.shape[0] * diff.shape[1]} pixels differ, max diff {diff.max()}"
     )
     ys, xs = np.nonzero(diff.any(axis=-1))
-    print("bbox:", ys.min(), ys.max(), xs.min(), xs.max())
+    try:
+        print("bbox:", ys.min(), ys.max(), xs.min(), xs.max())
+    except:
+        pass
 
     assert not np.array_equal(blank_frame, full_frame)
     assert not np.array_equal(full_frame, half_frame)
