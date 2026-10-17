@@ -29,12 +29,18 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-ver }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-ver }}
 
       - name: Install Xvfb and OpenGL
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1 libxrender1 libxcursor1 libxft2 libxinerama1
+
+      - name: Set up headless display for rendering tests
+        uses: pyvista/setup-headless-display-action@v4
 
       - name: Install package for Ubuntu and MacOS
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
