@@ -30,6 +30,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-ver }}
 
+      - name: Install Xvfb and OpenGL
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1 libxrender1 libxcursor1 libxft2 libxinerama1
+
       - name: Install package for Ubuntu and MacOS
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
         run: pip install .[all]
