@@ -1,6 +1,6 @@
 """Module for input/output operations."""
 
-import gzip, shutil, re, math
+import shutil, re, math
 from pathlib import Path
 from typing import Iterator, TypeAlias
 

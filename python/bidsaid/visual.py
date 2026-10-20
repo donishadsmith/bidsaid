@@ -13,6 +13,7 @@ from numpy.typing import NDArray
 
 try:
     import pyvista as pv
+    from vtkmodules.vtkRenderingCore import vtkRenderer
 except ImportError as error:
     raise ImportError(
         "``pyvista`` is required for ``bidsaid.visual``. Install it with "
@@ -30,6 +31,17 @@ ViewName: TypeAlias = Literal[
 
 View: TypeAlias = ViewName | tuple[float, float, float]
 """A named view or a custom ``(x, y, z)`` rotation of the surface in degrees."""
+
+LabelAnchor: TypeAlias = tuple[
+    Literal["left", "center", "right"], Literal["bottom", "center", "top"]
+]
+"""The ``(horizontal, vertical)`` point of the label text placed at ``label_position``."""
+
+_HORIZONTAL_ANCHORS, _VERTICAL_ANCHORS = ("left", "center", "right"), (
+    "bottom",
+    "center",
+    "top",
+)
 
 VIEW_ORIENTATIONS: dict[ViewName, tuple[float, float, float]] = {
     "lateral": (0, 90, 90),
@@ -52,7 +64,49 @@ _SULCAL_LAYER, _DATA_LAYER = "sulcal_depth", "surface_data"
 DARK_SULCAL_CMAP = LinearSegmentedColormap.from_list(
     "dark_sulcal_depth", ["#4d4d4d", "#1f1f1f"]
 )
-"""Dark gray shading of the folding pattern, gyri slightly lighter than sulci."""
+"""Dark gray shading of the folding pattern of gyri and sulci, respectively."""
+
+
+def _validate_label_position(label_position: tuple[float, float], param_name: str):
+    if not all(0 <= value <= 1 for value in label_position):
+        raise ValueError(
+            f"Both 'x' and 'y' of ``{param_name}`` must be between 0 and 1."
+        )
+
+
+def _validate_anchor(anchor: LabelAnchor, name: str) -> None:
+    """Raise if ``anchor`` is not a valid ``(horizontal, vertical)`` pair."""
+    horizontal, vertical = anchor
+    if horizontal not in _HORIZONTAL_ANCHORS or vertical not in _VERTICAL_ANCHORS:
+        raise ValueError(
+            f"``{name}`` must be a (horizontal, vertical) tuple with horizontal in "
+            f"{_HORIZONTAL_ANCHORS} and vertical in {_VERTICAL_ANCHORS}."
+        )
+
+
+def _create_text(
+    text: str,
+    position: tuple[float, float],
+    anchor: LabelAnchor,
+    font_size: int,
+    color: str | tuple[float, float, float],
+) -> "pv.Text":
+    """
+    Create a text actor positioned in normalized viewport coordinates.
+
+    ``position`` is a fraction of the viewport of whichever renderer the actor is added to
+    (a panel or the full-frame overlay) and ``anchor`` is the point of the text placed there.
+    """
+    text_actor = pv.Text(text, position=(0, 0))
+    text_actor.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+    text_actor.position = tuple(position)
+    text_actor.prop.justification_horizontal, text_actor.prop.justification_vertical = (
+        anchor
+    )
+    text_actor.prop.font_size = font_size
+    text_actor.prop.color = color
+
+    return text_actor
 
 
 def get_colormap(cmap: str | Colormap) -> Colormap:
@@ -178,8 +232,27 @@ class SurfaceRenderer:
     sulcal_cmap : :obj:`Colormap`, default=DARK_SULCAL_CMAP
         Colormap of the sulcal depth backdrop.
 
-    label_font_size : :obj:`int`, default=10
-        Font size of the optional label drawn in the first panel.
+    label_font_size : :obj:`int`, default=30
+        Font size of the optional label drawn over the frame.
+
+    label_color : :obj:`str` or :obj:`tuple[float, float, float]`, default="white"
+        Color of the optional label drawn over the frame.
+
+    panel_labels : :obj:`dict[Literal["lh", "rh"], str]` or :obj:`None`, default=None
+        Static text drawn in every panel of a hemisphere (e.g. ``{"lh": "L", "rh": "R"}``).
+
+    panel_label_position : :obj:`tuple[float, float]`, default=(0.5, 0.02)
+        The ``(x, y)`` position of the panel labels as fractions of the panel's width and
+        height, with ``(0, 0)`` the lower left corner of the panel and ``(1, 1)`` its upper right.
+
+    panel_label_anchor : :obj:`tuple[Literal["left", "center", "right"], Literal["bottom", "center", "top"]]`, default=("center", "bottom")
+        The ``(horizontal, vertical)`` point of the panel label text placed at ``panel_label_position``.
+
+    panel_label_font_size : :obj:`int`, default=20
+        Font size of the panel labels.
+
+    panel_label_color : :obj:`str` or :obj:`tuple[float, float, float]`, default="white"
+        Color of the panel labels.
 
     antialiasing : :obj:`bool`, default=True
         Whether to use multisample antialiasing.
@@ -218,7 +291,13 @@ class SurfaceRenderer:
         zero_transparent: bool = True,
         background: str | tuple[float, float, float] = "black",
         sulcal_cmap: Colormap = DARK_SULCAL_CMAP,
-        label_font_size: int = 10,
+        label_font_size: int = 30,
+        label_color: str | tuple[float, float, float] = "white",
+        panel_labels: dict[Literal["lh", "rh"], str] | None = None,
+        panel_label_position: tuple[float, float] = (0.5, 0.02),
+        panel_label_anchor: LabelAnchor = ("center", "bottom"),
+        panel_label_font_size: int = 20,
+        panel_label_color: str | tuple[float, float, float] = "white",
         antialiasing: bool = True,
     ):
         views = views or {"lh": ["lateral", "medial"], "rh": ["lateral", "medial"]}
@@ -229,6 +308,8 @@ class SurfaceRenderer:
 
         if layout not in ("row", "grid"):
             raise ValueError("``layout`` must be 'row' or 'grid'.")
+
+        _validate_anchor(panel_label_anchor, "panel_label_anchor")
 
         self.threshold = threshold
         self.zero_transparent = zero_transparent
@@ -268,6 +349,7 @@ class SurfaceRenderer:
             border=False,
             lighting="none",
         )
+
         if antialiasing:
             self.plotter.render_window.SetMultiSamples(8)
 
@@ -284,10 +366,31 @@ class SurfaceRenderer:
                 zoom,
             )
 
-        self.plotter.subplot(0, 0)
-        self._label = self.plotter.add_text(
-            "", position="upper_left", font_size=label_font_size, color="white"
+        _validate_label_position(panel_label_position, "panel_label_position")
+        for panel_index, (hemisphere, _) in enumerate(self.panels):
+            if text := (panel_labels or {}).get(hemisphere):
+                self.plotter.subplot(*self.positions[panel_index])
+                self.plotter.renderer.AddActor(
+                    _create_text(
+                        text,
+                        panel_label_position,
+                        panel_label_anchor,
+                        panel_label_font_size,
+                        panel_label_color,
+                    )
+                )
+
+        self._overlay = vtkRenderer()
+        self._overlay.SetViewport(0, 0, 1, 1)
+        self._overlay.SetLayer(1)
+        self._overlay.InteractiveOff()
+        self.plotter.render_window.SetNumberOfLayers(2)
+        self.plotter.render_window.AddRenderer(self._overlay)
+
+        self._label = _create_text(
+            "", (0.02, 0.98), ("left", "top"), label_font_size, label_color
         )
+        self._overlay.AddActor(self._label)
 
     def _get_panel_positions(
         self, views: dict[str, list[View]]
@@ -389,6 +492,8 @@ class SurfaceRenderer:
         lh: NDArray | None = None,
         rh: NDArray | None = None,
         label: str | None = None,
+        label_position: tuple[float, float] = (0.02, 0.98),
+        label_anchor: LabelAnchor = ("left", "top"),
     ) -> NDArray[np.uint8]:
         """
         Render a Frame.
@@ -404,7 +509,16 @@ class SurfaceRenderer:
             only its backdrop.
 
         label : :obj:`str` or :obj:`None`, default=None
-            Text drawn in the upper left corner of the first panel.
+            Text drawn over the frame.
+
+        label_position : :obj:`tuple[float, float]`, default=(0.02, 0.98)
+            The ``(x, y)`` position of the label as fractions of the frame's width and height,
+            with ``(0, 0)`` the lower left corner of the frame and ``(1, 1)`` its upper right
+            (increasing ``y`` places the label closer to the top of the frame).
+
+        label_anchor : :obj:`tuple[Literal["left", "center", "right"], Literal["bottom", "center", "top"]]`, default=("left", "top")
+            The ``(horizontal, vertical)`` point of the text placed at ``label_position``. For instance,
+            ``("center", "top")`` with ``label_position=(0.5, 0.98)`` centers the label at the top of the image.
 
         Returns
         -------
@@ -418,7 +532,14 @@ class SurfaceRenderer:
             else:
                 mesh[_DATA_LAYER] = self._mask_transparent(data, hemisphere)
 
-        self._label.set_text("upper_left", label or "")
+        _validate_label_position(label_position, "label_position")
+        _validate_anchor(label_anchor, "label_anchor")
+        self._label.position = tuple(label_position)
+        (
+            self._label.prop.justification_horizontal,
+            self._label.prop.justification_vertical,
+        ) = label_anchor
+        self._label.input = label or ""
 
         self.plotter.render()
 
@@ -437,6 +558,7 @@ class SurfaceRenderer:
 
 __all__ = [
     "DARK_SULCAL_CMAP",
+    "LabelAnchor",
     "VIEW_ORIENTATIONS",
     "SurfaceRenderer",
     "create_polydata",
