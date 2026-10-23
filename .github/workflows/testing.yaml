@@ -52,20 +52,20 @@ jobs:
           git config --system core.longpaths true
           pip install .[all]
 
-      - name: Run tests with coverage for Ubuntu on Python 3.10
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-ver == '3.10' }}
-        run: pytest --cov bidsaid
+      - name: Run tests with coverage for Ubuntu on Python 3.15
+        if: ${{ matrix.os == 'windows-latest' && matrix.python-ver == '3.15' }}
+        run: pytest --cov bidsaid -rs
 
-      - name: Run test without coverage for Ubuntu from Python >= 3.10
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-ver != '3.10' }}
-        run: pytest .
+      - name: Run test without coverage for Windows from Python <= 3.15
+        if: ${{ matrix.os != 'windows-latest' && matrix.python-ver != '3.15' }}
+        run: pytest . -rs
 
-      - name: Run test without coverage for Windows and Mac
-        if: ${{ matrix.os != 'ubuntu-latest' }}
-        run: pytest .
+      - name: Run test without coverage for Ubuntu and Mac
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: pytest . -rs
 
-      - name: Upload coverage reports to Codecov for Ubuntu
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-ver == '3.10' }}
+      - name: Upload coverage reports to Codecov for Windows
+        if: ${{ matrix.os == 'windows-latest' && matrix.python-ver == '3.15' }}
         uses: codecov/codecov-action@v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
