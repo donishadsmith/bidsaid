@@ -625,7 +625,7 @@ class MovieWriter:
             tasks = self.grid.setdefault(surface_run.subject_id, {})
             if surface_run.task_name in tasks:
                 raise ValueError(
-                    f"Duplicate run for {_add_entity_prefix(surface_run.subject_id, "sub")} and task "
+                    f"Duplicate run for {_add_entity_prefix(surface_run.subject_id, 'sub')} and task "
                     f"{surface_run.task_name}."
                 )
 
@@ -639,13 +639,13 @@ class MovieWriter:
         """Raise if the hemispheres of a run are not 2D arrays with the same number of frames."""
         if surface_run.lh.ndim != 2 or surface_run.rh.ndim != 2:
             raise ValueError(
-                f"The hemispheres of {_add_entity_prefix(surface_run.subject_id, "sub")} task {surface_run.task_name} "
+                f"The hemispheres of {_add_entity_prefix(surface_run.subject_id, 'sub')} task {surface_run.task_name} "
                 "must be 2D (n_vertices, n_frames) arrays."
             )
 
         if surface_run.lh.shape[1] != surface_run.rh.shape[1]:
             raise ValueError(
-                f"The hemispheres of {_add_entity_prefix(surface_run.subject_id, "sub")} task {surface_run.task_name} "
+                f"The hemispheres of {_add_entity_prefix(surface_run.subject_id, 'sub')} task {surface_run.task_name} "
                 f"have a different number of frames ({surface_run.lh.shape[1]} and "
                 f"{surface_run.rh.shape[1]})."
             )
@@ -760,7 +760,7 @@ class MovieWriter:
 
         if len({run.frame_tr for run in surface_runs}) > 1:
             LGR.warning(
-                f"Runs of {description} differ in TR or ``n_interpolated_frames``, the movie uses the timing of {_add_entity_prefix(surface_runs[0].subject_id, "sub")} "
+                f"Runs of {description} differ in TR or ``n_interpolated_frames``, the movie uses the timing of {_add_entity_prefix(surface_runs[0].subject_id, 'sub')} "
                 f"task  {surface_runs[0].task_name} so panels will play at different speeds relative to real time."
             )
 
@@ -831,7 +831,7 @@ class MovieWriter:
                 for subject_id, tasks in self.grid.items():
                     subject_movies[subject_id] = self._open_movie(
                         dst_dir
-                        / f"{_add_entity_prefix(subject_id, "sub")}_desc-{desc}_movie.mp4",
+                        / f"{_add_entity_prefix(subject_id, 'sub')}_desc-{desc}_movie.mp4",
                         list(tasks.values()),
                         _add_entity_prefix(subject_id, "sub"),
                     )
