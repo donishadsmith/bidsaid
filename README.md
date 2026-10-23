@@ -10,7 +10,7 @@
 [![Documentation Status](https://readthedocs.org/projects/bidsaid/badge/?version=stable)](http://bidsaid.readthedocs.io/en/stable/?badge=stable)
 
 
-A toolkit for creating and managing BIDS-compliant fMRI datasets without original DICOMs. Intended for cases that require custom code and flexibility, such as when NIfTI source files lack consistent naming conventions, organized folder hierarchies, or sidecar metadata. Includes utilities for metadata reconstruction from NIfTI headers, file renaming, neurobehavioral log parsing (for E-Prime and Presentation), and JSON sidecar generation.
+A toolkit for creating and managing BIDS-compliant fMRI datasets without original DICOMs. Intended for cases that require custom code and flexibility, such as when NIfTI source files lack consistent naming conventions, organized folder hierarchies, or sidecar metadata. Includes utilities for metadata reconstruction from NIfTI headers, file renaming, neurobehavioral log parsing (for E-Prime and Presentation), JSON sidecar generation, surface projection, and making surface clips/movies.
 
 ## Installation
 
@@ -18,6 +18,8 @@ A toolkit for creating and managing BIDS-compliant fMRI datasets without origina
 ```bash
 pip install bidsaid[all]
 ```
+
+Surface projection and movie writing are optional extras: `bidsaid[surface]` (`neuromaps` for the fsaverage surfaces), `bidsaid[visual]` (`pyvista` for rendering) and `bidsaid[movie]` (`imageio` with ffmpeg for writing movies). `bidsaid[all]` includes everything.
 
 ### Development Version
 ```bash
@@ -40,18 +42,19 @@ pip install -e .[all]
     | `EPrimeBlockExtractor` | E-Prime 3 | Block | Extracts block-level timing with mean RT and accuracy |
     | `EPrimeEventExtractor` | E-Prime 3 | Event | Extracts trial-level timing with individual responses |
 
-- **Auditing**: Generate a table of showing the presence or abscence of certain files for each subject and session
-- **QC**: Creation and computation of certain quality control metrics (e.g., framewise displacement)
+- **Auditing**: Generate a table showing the presence or absence of certain files for each subject and session
+- **QC**: Creation and computation of certain quality control metrics (e.g., framewise displacement), censoring and temporal interpolation
+- **Surface movies**: Project denoised runs onto the fsaverage surfaces and write per-participant, per-task or group movies with `SurfaceRenderer` and `MovieWriter`
 
 ## Quick Start
 
 ### Creating BIDS-Compliant Filenames
 ```python
-from bidsaid.bids import create_bids_file
+from bidsaid.files import create_bids_file
 
 create_bids_file(
     src_file="101_mprage.nii.gz",
-    subj_id="101",
+    sub_id="101",
     ses_id="01",
     desc="T1w",
     dst_dir="/data/bids/sub-101/ses-01/anat",
@@ -76,19 +79,19 @@ orientation_map, orientation = get_image_orientation("sub-01_bold.nii.gz")
 from bidsaid.parsers import (
     load_presentation_log,
     load_eprime_log,
-    convert_edat3_to_txt,
+    convert_edat3_to_text,
 )
 
 presentation_df = load_presentation_log("sub-01_task.log", convert_to_seconds=["Time"])
 
 # E-Prime 3: convert .edat3 to text first, or load .txt directly
-eprime_txt_path = convert_edat3_to_txt("sub-01_task.edat3")
+eprime_txt_path = convert_edat3_to_text("sub-01_task.edat3")
 eprime_df = load_eprime_log(eprime_txt_path, convert_to_seconds=["Stimulus.OnsetTime"])
 ```
 
 ### Creating BIDS Events from Presentation Logs
 ```python
-from bidsaid.bids import PresentationBlockExtractor
+from bidsaid.events import PresentationBlockExtractor
 import pandas as pd
 
 extractor = PresentationBlockExtractor(
@@ -114,7 +117,7 @@ events_df = pd.DataFrame(
 
 ### Creating BIDS Events from E-Prime Logs
 ```python
-from bidsaid.bids import EPrimeEventExtractor
+from bidsaid.events import EPrimeEventExtractor
 import pandas as pd
 
 extractor = EPrimeEventExtractor(
@@ -182,5 +185,57 @@ consecutive_censor_mean, consecutive_censor_std = compute_consecutive_censor_sta
     censor_mask, n_dummy_scans=4
 )
 ```
+
+### Surface Movies
+```python
+from bidsaid.movie import MovieWriter, compute_vmax, create_surface_run, virtual_display
+from bidsaid.surface import fetch_fsaverage_surfaces, get_cortex_masks
+from bidsaid.visual import SurfaceRenderer
+
+surfaces = fetch_fsaverage_surfaces("10k")
+cortex_masks = get_cortex_masks(surfaces["medial"])
+
+# One run per participant and task; the "sub" and "task" entities are read from the filename
+surface_runs = [
+    create_surface_run(
+        denoised_file,
+        surfaces["pial"],
+        surfaces["white"],
+        cortex_masks,
+        n_interpolated_frames=1,  # smoother playback (display only)
+        fwhm=4,
+    )
+    for denoised_file in [
+        "sub-01_task-rest_desc-denoised_bold.nii.gz",
+        "sub-01_task-music_desc-denoised_bold.nii.gz",
+        "sub-02_task-rest_desc-denoised_bold.nii.gz",
+        "sub-02_task-music_desc-denoised_bold.nii.gz",
+    ]
+]
+
+threshold = 1.0
+vmax = compute_vmax(surface_runs, threshold=threshold)
+
+# virtual_display starts Xvfb for headless environments
+with (
+    virtual_display(),
+    SurfaceRenderer(
+        *surfaces["inflated"],
+        sulcal_depths=surfaces["sulc"],
+        color_range=(-vmax, vmax),
+        threshold=threshold,
+        top_spacing=80,  # space aboce brains for label
+    ) as renderer,
+):
+    movie_files = MovieWriter(
+        surface_runs,
+        renderer,
+        task_order=["rest", "music"],
+        playback_speed=1,
+        label_format="{subject_name} {task_name} t = {frame_time:.1f} s",
+    ).write("movies", per_subject=True, per_task=True, shared=True)
+```
+
+Each participant is a row and each task a column. `per_subject` writes one movie per participant with their tasks side by side, `per_task` one movie per task with the participants stacked, and `shared` the full grid in a single movie.
 
 See the [API documentation](https://bidsaid.readthedocs.io/en/latest/api.html) for full parameter details and additional utilities.

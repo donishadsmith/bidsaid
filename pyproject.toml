@@ -48,11 +48,12 @@ dependencies = [
     ]
 
 [project.optional-dependencies]
-all = ["bidsaid[test, windows, surface, visual]"]
+all = ["bidsaid[test, windows, surface, visual, movies]"]
 test = ["pytest", "pytest-cov"]
 windows = ["pybids>=0.16.5"]
 visual = ["pyvista"]
 surface = ["neuromaps"]
+movies = ["imageio"]
 
 [tool.setuptools.packages.find]
 where = ["python"]

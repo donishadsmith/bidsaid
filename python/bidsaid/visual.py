@@ -16,8 +16,7 @@ try:
     from vtkmodules.vtkRenderingCore import vtkRenderer
 except ImportError as error:
     raise ImportError(
-        "``pyvista`` is required for ``bidsaid.visual``. Install it with "
-        "``pip install bidsaid[visual]``."
+        "``pyvista`` is required for ``bidsaid.visual``. Install it with ``pip install bidsaid[visual]``."
     ) from error
 
 from bidsaid.logging import setup_logger
@@ -76,8 +75,7 @@ def _validate_label_position(label_position: tuple[float, float], param_name: st
 
 def _validate_anchor(anchor: LabelAnchor, name: str) -> None:
     """Raise if ``anchor`` is not a valid ``(horizontal, vertical)`` pair."""
-    horizontal, vertical = anchor
-    if horizontal not in _HORIZONTAL_ANCHORS or vertical not in _VERTICAL_ANCHORS:
+    if anchor[0] not in _HORIZONTAL_ANCHORS or anchor[1] not in _VERTICAL_ANCHORS:
         raise ValueError(
             f"``{name}`` must be a (horizontal, vertical) tuple with horizontal in "
             f"{_HORIZONTAL_ANCHORS} and vertical in {_VERTICAL_ANCHORS}."
@@ -196,9 +194,8 @@ class SurfaceRenderer:
         The right hemisphere surface to display.
 
     views : :obj:`dict[str, list[View]]` or :obj:`None`, default=None
-        The views to render for each hemisphere, with the keys "lh" and "rh". A hemisphere can be omitted
-        to exclude it. Views are "lateral", "medial", "dorsal", "ventral", "anterior", "posterior" or a
-        custom ``(x, y, z)`` rotation in degrees. If None, ``{"lh": ["lateral", "medial"], "rh": ["lateral", "medial"]}`` is used.
+        The views to render for each hemisphere, with the keys "lh" and "rh". A hemisphere can be omitted to exclude it. Views are "lateral", "medial", "dorsal",
+        "ventral", "anterior", "posterior" or a custom ``(x, y, z)`` rotation in degrees. If None, ``{"lh": ["lateral", "medial"], "rh": ["lateral", "medial"]}`` is used.
 
     layout : :obj:`Literal["row", "grid"]`, default="row"
         How the panels are arranged. "row" places all panels side by side in a single row, left hemisphere first. "grid"
@@ -214,6 +211,13 @@ class SurfaceRenderer:
     zoom : :obj:`float`, default=1.2
         Camera zoom applied to each panel.
 
+    hemisphere_spacing : :obj:`int`, default=0
+        Width in pixels of the empty space between the left and right hemisphere panels (between the last left panel and the first right panel in "row" layout,
+        or between the two columns in "grid" layout). Brains maintain there size but the spacing between the panels change.
+
+    top_spacing : :obj:`int`, default=0
+        Height in pixels of an header space above all panels. Brains maintain there size but the spacing from the top of the panels change.
+
     cmap : :obj:`str` or :obj:`Colormap`, default="cold_hot"
         Colormap of the data. Nilearn and matplotlib colormap names are accepted.
 
@@ -224,7 +228,7 @@ class SurfaceRenderer:
         Vertices whose absolute value is below this threshold are transparent.
 
     zero_transparent : :obj:`bool`, default=True
-        Whether vertices with a value of exactly 0 are transparent (e.g. the medial wall after :func:`bidsaid.surface.project_to_surface`).
+        Whether vertices with a value of exactly 0 are transparent.
 
     background : :obj:`str` or :obj:`tuple[float, float, float]`, default="black"
         Background color of the panels.
@@ -242,8 +246,7 @@ class SurfaceRenderer:
         Static text drawn in every panel of a hemisphere (e.g. ``{"lh": "L", "rh": "R"}``).
 
     panel_label_position : :obj:`tuple[float, float]`, default=(0.5, 0.02)
-        The ``(x, y)`` position of the panel labels as fractions of the panel's width and
-        height, with ``(0, 0)`` the lower left corner of the panel and ``(1, 1)`` its upper right.
+        The ``(x, y)`` position of the panel labels as fractions of the panel's width and height, with ``(0, 0)`` the lower left corner of the panel and ``(1, 1)`` its upper right.
 
     panel_label_anchor : :obj:`tuple[Literal["left", "center", "right"], Literal["bottom", "center", "top"]]`, default=("center", "bottom")
         The ``(horizontal, vertical)`` point of the panel label text placed at ``panel_label_position``.
@@ -285,6 +288,8 @@ class SurfaceRenderer:
         sulcal_depths: tuple[str | NDArray, str | NDArray] | None = None,
         size: tuple[int, int] = (400, 300),
         zoom: float = 1.2,
+        hemisphere_spacing: int = 0,
+        top_spacing: int = 0,
         cmap: str | Colormap = "cold_hot",
         color_range: tuple[float, float] = (-3.0, 3.0),
         threshold: float = 0.0,
@@ -309,11 +314,18 @@ class SurfaceRenderer:
         if layout not in ("row", "grid"):
             raise ValueError("``layout`` must be 'row' or 'grid'.")
 
+        if hemisphere_spacing < 0 or top_spacing < 0:
+            raise ValueError(
+                "``hemisphere_spacing`` and ``top_spacing`` must be 0 or greater."
+            )
+
         _validate_anchor(panel_label_anchor, "panel_label_anchor")
 
         self.threshold = threshold
         self.zero_transparent = zero_transparent
         self.layout = layout
+        self._color_range = tuple(color_range)
+        self._data_actors = []
         self.meshes = {
             "lh": create_polydata(left_surface),
             "rh": create_polydata(right_surface),
@@ -323,9 +335,24 @@ class SurfaceRenderer:
             for hemisphere in ("lh", "rh")
             for view in views.get(hemisphere, [])
         ]
-        self.positions = self._get_panel_positions(views)
+
+        self.hemisphere_spacing = (
+            hemisphere_spacing
+            if all(views.get(hemisphere) for hemisphere in ("lh", "rh"))
+            else 0
+        )
+
+        self.top_spacing = top_spacing
+        self.positions, self._spacer_column = self._get_panel_positions(views)
         n_rows = max(row for row, _ in self.positions.values()) + 1
         n_columns = max(column for _, column in self.positions.values()) + 1
+        column_widths = [size[0]] * n_columns
+        if self.hemisphere_spacing:
+            column_widths[self._spacer_column] = self.hemisphere_spacing
+
+        row_heights = [size[1]] * n_rows
+        if self.top_spacing:
+            row_heights[0] = self.top_spacing
 
         for hemisphere_index, hemisphere in enumerate(("lh", "rh")):
             mesh = self.meshes[hemisphere]
@@ -345,15 +372,19 @@ class SurfaceRenderer:
         self.plotter = pv.Plotter(
             off_screen=True,
             shape=(n_rows, n_columns),
-            window_size=(size[0] * n_columns, size[1] * n_rows),
+            row_weights=row_heights,
+            col_weights=column_widths,
+            window_size=(sum(column_widths), sum(row_heights)),
             border=False,
             lighting="none",
         )
+        self._column_widths, self._row_heights = column_widths, row_heights
 
         if antialiasing:
             self.plotter.render_window.SetMultiSamples(8)
 
         self.plotter.set_background(background)
+        self.background_rgb = tuple(pv.Color(background).int_rgb)
         data_cmap = get_colormap(cmap)
         for panel_index, (hemisphere, view) in enumerate(self.panels):
             self._add_panel(
@@ -395,22 +426,67 @@ class SurfaceRenderer:
     def _get_panel_positions(
         self, views: dict[str, list[View]]
     ) -> dict[int, tuple[int, int]]:
-        """Map each panel index to its ``(row, column)`` in the plotter."""
+        """
+        Map each panel index to its ``(row, column)`` in the plotter.
+
+        When ``hemisphere_spacing`` is used, the right hemisphere panels are shifted one column to the right to leave the spacer column
+        (``_spacer_column``) empty. When ``top_spacing`` is used, all panels are shifted one row down to leave the first row empty.
+        """
+        n_left = len(views.get("lh", []))
+        first_row = int(bool(self.top_spacing))
         if self.layout == "row":
-            return {
-                panel_index: (0, panel_index) for panel_index in range(len(self.panels))
-            }
+            return (
+                {
+                    panel_index: (
+                        first_row,
+                        panel_index
+                        + (panel_index >= n_left) * bool(self.hemisphere_spacing),
+                    )
+                    for panel_index in range(len(self.panels))
+                },
+                n_left,
+            )
 
         hemispheres = [
             hemisphere for hemisphere in ("lh", "rh") if views.get(hemisphere)
         ]
         positions, panel_index = {}, 0
         for column, hemisphere in enumerate(hemispheres):
+            column += (hemisphere == "rh") * bool(self.hemisphere_spacing)
             for row in range(len(views[hemisphere])):
-                positions[panel_index] = (row, column)
+                positions[panel_index] = (first_row + row, column)
                 panel_index += 1
 
-        return positions
+        return positions, 1
+
+    @property
+    def hemisphere_spacing_center(self) -> tuple[float, float]:
+        """
+        The ``(x, y)`` center of the gutter between the hemispheres.
+
+        Pass it as ``label_position`` with ``label_anchor=("center", "center")`` to draw the label in the gutter. Equals ``(0.5, 0.5)`` when
+        both hemispheres have the same number of views.
+        """
+        if not self.hemisphere_spacing:
+            return (0.5, 0.5)
+
+        left_width = sum(self._column_widths[: self._spacer_column])
+        center = left_width + self.hemisphere_spacing / 2
+
+        return (center / sum(self._column_widths), 0.5)
+
+    @property
+    def top_spacing_center(self) -> tuple[float, float]:
+        """
+        The ``(x, y)`` center of the header above the panel.
+
+        Pass it as ``label_position`` with ``label_anchor=("center", "center")`` to draw the label centered above the brains. Equals ``(0.5, 0.98)``
+        when there is no ``top_spacing``.
+        """
+        if not self.top_spacing:
+            return (0.5, 0.98)
+
+        return (0.5, 1 - self.top_spacing / 2 / sum(self._row_heights))
 
     def _add_panel(
         self,
@@ -455,6 +531,7 @@ class SurfaceRenderer:
         )
         data_actor.orientation = orientation
         data_actor.force_opaque = True
+        self._data_actors.append(data_actor)
 
         self.plotter.camera_position = "xy"
         self.plotter.camera.parallel_projection = True
@@ -466,14 +543,34 @@ class SurfaceRenderer:
         """The number of panels (hemisphere and view combinations) in a frame."""
         return len(self.panels)
 
+    @property
+    def color_range(self) -> tuple[float, float]:
+        """
+        The ``(vmin, vmax)`` of the data colormap.
+
+        Can be reassigned between calls to :meth:`render` (e.g. to give each task of a movie its own color range) without rebuilding the scene.
+        """
+        return self._color_range
+
+    @color_range.setter
+    def color_range(self, color_range: tuple[float, float]) -> None:
+        vmin, vmax = color_range
+        if vmin >= vmax:
+            raise ValueError(
+                "``color_range`` must be a (vmin, vmax) tuple with vmin < vmax."
+            )
+
+        self._color_range = (float(vmin), float(vmax))
+        for data_actor in self._data_actors:
+            data_actor.mapper.scalar_range = self._color_range
+
     def _mask_transparent(self, data: NDArray, hemisphere: str) -> NDArray:
         """Return a float copy of the data with transparent vertices set to NaN."""
         data = np.array(data, dtype=float)
         n_points = self.meshes[hemisphere].n_points
         if data.shape != (n_points,):
             raise ValueError(
-                f"The {hemisphere} data must have shape ({n_points},) to match the "
-                f"surface, not {data.shape}."
+                f"The {hemisphere} data must have shape ({n_points},) to match the surface, not {data.shape}."
             )
 
         transparent = np.isnan(data)
@@ -512,9 +609,8 @@ class SurfaceRenderer:
             Text drawn over the frame.
 
         label_position : :obj:`tuple[float, float]`, default=(0.02, 0.98)
-            The ``(x, y)`` position of the label as fractions of the frame's width and height,
-            with ``(0, 0)`` the lower left corner of the frame and ``(1, 1)`` its upper right
-            (increasing ``y`` places the label closer to the top of the frame).
+            The ``(x, y)`` position of the label as fractions of the frame's width and height, with ``(0, 0)`` the lower left corner
+            of the frame and ``(1, 1)`` its upper right (increasing ``y`` places the label closer to the top of the frame).
 
         label_anchor : :obj:`tuple[Literal["left", "center", "right"], Literal["bottom", "center", "top"]]`, default=("left", "top")
             The ``(horizontal, vertical)`` point of the text placed at ``label_position``. For instance,

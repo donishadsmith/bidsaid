@@ -18,7 +18,7 @@ _INTERPOLATORS: dict[Literal["cubic", "pchip"], ScipyInterpolatorClass] = {
 
 def upsample_array(
     array: NDArray[np.floating],
-    n_interpolate: int,
+    n_interpolated_frames: int,
     axis: int = -1,
     method: Literal["cubic", "pchip"] = "cubic",
     chunk_size: int = 20000,
@@ -26,25 +26,26 @@ def upsample_array(
     """
     Temporally Upsample an Array.
 
-    Inserts ``n`` interpolated frames in each gap between consecutive timepoints along
-    ``axis``. For ``T`` original timepoints, there are ``T - 1`` gaps, so the new length is
-    ``(T - 1) * n + T`` or ``(T - 1) * (n + 1) + 1``. The new TR will be
+    Inserts ``n_interpolated_frames`` (``n``) interpolated frames in each gap between consecutive
+    timepoints along ``axis``. For ``T`` original timepoints, there are ``T - 1`` gaps, so the new
+    length is ``(T - 1) * n + T`` or ``(T - 1) * (n + 1) + 1``. The new TR will be
     ``TR / (n + 1)``. Original timepoints are retained and can be recovered with
-    :func:`downsample_array` using the same ``n``.
+    :func:`downsample_array` using the same ``n_interpolated_frames``.
 
     Parameters
     ----------
     array : :obj:`NDArray[np.floating]`
         The data to upsample (e.g. a 4D volume array or a 2D vertices x time surface array).
 
-    n_interpolate : :obj:`int`
+    n_interpolated_frames : :obj:`int`
         The number of interpolated frames inserted in each gap between two real timepoints.
 
     axis : :obj:`int`, default=-1
         The dimension containing the timepoints to be interpolated.
 
     method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
-        The interpolation method to use ("cubic" for cublic spline and "pcip" for shape-preserving cubic).
+        The interpolation method to use ("cubic" for cubic spline and "pchip" for
+        shape-preserving cubic).
 
     chunk_size : :obj:`int`, default=20000
         The number of voxels or vertices interpolated at once.
@@ -52,7 +53,7 @@ def upsample_array(
     Returns
     -------
     NDArray[np.floating]
-        The upsampled array, with the same dimensions as ``array`` but as a length of
+        The upsampled array, with the same dimensions as ``array`` but with a length of
         ``(T - 1) * n + T`` in ``axis``.
     """
     assert method in ["cubic", "pchip"], "method must be 'cubic' or 'pchip'"
@@ -62,9 +63,9 @@ def upsample_array(
 
     n_timepoints = array.shape[-1]
     old_timepoints = np.arange(n_timepoints)
-    new_timepoints = np.arange((n_timepoints - 1) * n_interpolate + n_timepoints) / (
-        n_interpolate + 1
-    )
+    new_timepoints = np.arange(
+        (n_timepoints - 1) * n_interpolated_frames + n_timepoints
+    ) / (n_interpolated_frames + 1)
 
     flat_array = array.reshape(-1, n_timepoints)
     out_array = np.empty((flat_array.shape[0], new_timepoints.size), dtype=array.dtype)
@@ -74,28 +75,28 @@ def upsample_array(
             old_timepoints, chunk, axis=-1
         )(new_timepoints)
 
-    out_array[:, :: n_interpolate + 1] = flat_array
+    out_array[:, :: n_interpolated_frames + 1] = flat_array
     out_array = out_array.reshape(array.shape[:-1] + (new_timepoints.size,))
 
     return np.moveaxis(out_array, -1, axis)
 
 
 def downsample_array(
-    array: NDArray[np.floating], n_interpolate: int, axis: int = -1
+    array: NDArray[np.floating], n_interpolated_frames: int, axis: int = -1
 ) -> NDArray[np.floating]:
     """
     Temporally Downsample an Array.
 
-    Retains every ``(n + 1)``th frame along ``axis``, reversing :func:`upsample_array` when
-    the same ``n`` is used. Note that ``n + 1`` is equivalent to
-    ``original_tr / upsampled_tr``, and the new TR is ``TR * (n + 1)``.
+    Retains every ``(n + 1)``th frame along ``axis`` (where ``n`` is ``n_interpolated_frames``),
+    reversing :func:`upsample_array` when the same ``n_interpolated_frames`` is used. Note that
+    ``n + 1`` is equivalent to ``original_tr / upsampled_tr``, and the new TR is ``TR * (n + 1)``.
 
     Parameters
     ----------
     array : :obj:`NDArray[np.floating]`
         The upsampled data (e.g. a 4D volume array or a 2D vertices x time surface array).
 
-    n_interpolate : :obj:`int`
+    n_interpolated_frames : :obj:`int`
         The number of interpolated frames that were inserted in each gap between two real
         timepoints.
 
@@ -108,7 +109,7 @@ def downsample_array(
         The downsampled array with the same dimensions as ``array``.
     """
     slicer = [slice(None)] * array.ndim
-    slicer[axis] = slice(None, None, n_interpolate + 1)
+    slicer[axis] = slice(None, None, n_interpolated_frames + 1)
 
     return array[tuple(slicer)]
 
@@ -202,20 +203,21 @@ def interpolate_censored_array(
 
 
 def _create_hdr(
-    nifti_img,
-    n: int,
+    nifti_img: nib.nifti1.Nifti1Image,
+    n_interpolated_frames: int,
     img_fdata: NDArray[np.floating],
     direction: Literal["upsample", "downsample"],
-):
+) -> nib.nifti1.Nifti1Header:
+    """Copy the header of an image with the data type and TR of the resampled data."""
     assert direction in [
         "upsample",
         "downsample",
     ], "direction must be either 'upsample' or 'downsample'"
 
     new_tr = (
-        get_tr(nifti_img) / (n + 1)
+        get_tr(nifti_img) / (n_interpolated_frames + 1)
         if direction == "upsample"
-        else get_tr(nifti_img) * (n + 1)
+        else get_tr(nifti_img) * (n_interpolated_frames + 1)
     )
     hdr = nifti_img.header.copy()
     hdr.set_data_dtype(img_fdata.dtype)
@@ -226,7 +228,7 @@ def _create_hdr(
 
 def upsample_img(
     nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
-    n_interpolate: int,
+    n_interpolated_frames: int,
     method: Literal["cubic", "pchip"] = "cubic",
     chunk_size: int = 20000,
 ) -> nib.nifti1.Nifti1Image:
@@ -238,11 +240,12 @@ def upsample_img(
     nifti_file_or_img : :obj:`str`, :obj:`Path`, or :obj:`Nifti1Image`
         Path to the functional NIfTI file or a functional NIfTI image.
 
-    n_interpolate : :obj:`int`
+    n_interpolated_frames : :obj:`int`
         The number of interpolated frames inserted in each gap between two real volumes.
 
     method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
-        The interpolation method to use ("cubic" for cublic spline and "pcip" for shape-preserving cubic).
+        The interpolation method to use ("cubic" for cubic spline and "pchip" for
+        shape-preserving cubic).
 
     chunk_size : :obj:`int`, default=20000
         The number of voxels interpolated at once.
@@ -255,18 +258,18 @@ def upsample_img(
     nifti_img = load_nifti(nifti_file_or_img)
     img_data = np.asanyarray(nifti_img.dataobj, dtype=np.float32)
     upsampled_img_fdata = upsample_array(
-        img_data, n_interpolate, -1, method, chunk_size
+        img_data, n_interpolated_frames, -1, method, chunk_size
     )
 
     return nib.Nifti1Image(
         upsampled_img_fdata,
         nifti_img.affine,
-        _create_hdr(nifti_img, n_interpolate, upsampled_img_fdata, "upsample"),
+        _create_hdr(nifti_img, n_interpolated_frames, upsampled_img_fdata, "upsample"),
     )
 
 
 def downsample_img(
-    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image, n_interpolate: int
+    nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image, n_interpolated_frames: int
 ) -> nib.nifti1.Nifti1Image:
     """
     Temporally Downsample NIfTI Image.
@@ -276,7 +279,7 @@ def downsample_img(
     nifti_file_or_img : :obj:`str`, :obj:`Path`, or :obj:`Nifti1Image`
         Path to the functional NIfTI file or a functional NIfTI image.
 
-    n_interpolate : :obj:`int`
+    n_interpolated_frames : :obj:`int`
         The number of interpolated frames inserted in each gap between two real volumes.
 
     Returns
@@ -285,12 +288,16 @@ def downsample_img(
         The downsampled NIfTI image with the downsampled TR in the header.
     """
     nifti_img = load_nifti(nifti_file_or_img)
-    downsampled_img_fdata = np.asanyarray(nifti_img.dataobj[..., :: n_interpolate + 1])
+    downsampled_img_fdata = np.asanyarray(
+        nifti_img.dataobj[..., :: n_interpolated_frames + 1]
+    )
 
     return nib.Nifti1Image(
         downsampled_img_fdata,
         nifti_img.affine,
-        _create_hdr(nifti_img, n_interpolate, downsampled_img_fdata, "downsample"),
+        _create_hdr(
+            nifti_img, n_interpolated_frames, downsampled_img_fdata, "downsample"
+        ),
     )
 
 
@@ -343,49 +350,12 @@ def interpolate_censored_img(
     return nib.Nifti1Image(interpolated_img_fdata, nifti_img.affine, hdr)
 
 
-def compute_frame_timing(
-    tr: float, n_interpolate: int, target_fps: int, playback_speed: int
-) -> tuple[float, int]:
-    """
-    Compute Frame Timing.
-
-    Return the output frame rate and how often each rendered frame is written.
-
-    Parameters
-    ----------
-    tr : :obj:`float`
-        The repetition time.
-
-    n_interpolate : :obj:`int`
-        The number of interpolated frames inserted in each gap between two real volumes.
-
-    target_fps : :obj:`int`
-        The targeted frames per second.
-
-    playback_speed : :obj:`int`
-        The speed relative to real time (e.g., playback_speed=10 means 10x relative to real time).
-
-    Return
-    ------
-    tuple[float, int]
-        Where the first value represents the new target frames per second and the second value
-        represents the number each frame must be repeated for that target frames per second.
-    """
-    if playback_speed is None:
-        return target_fps, 1
-
-    fps = playback_speed * (n_interpolate + 1) / tr
-    n_repeats_per_frame = max(1, round(target_fps / fps))
-
-    return fps * n_repeats_per_frame, n_repeats_per_frame
-
-
 __all__ = [
+    "compute_frame_timing",
     "downsample_array",
     "downsample_img",
     "interpolate_censored_array",
     "interpolate_censored_img",
     "upsample_array",
     "upsample_img",
-    "compute_frame_timing",
 ]

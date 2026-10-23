@@ -47,8 +47,7 @@ def fetch_fsaverage_surfaces(
     -------
     dict[str, tuple[str, str]]
         A dictionary with the keys "pial", "white", "inflated", "sulc", and "medial". Each value is a ``(left, right)``
-        tuple of file paths. The "medial" files are "desc-nomedialwall" labels where True indicates cortex (see
-        :func:`get_cortex_masks`).
+        tuple of file paths. The "medial" files are "desc-nomedialwall" labels where True indicates cortex (see :func:`get_cortex_masks`).
 
     .. important::
         Requires ``neuromaps``, which is installed with ``pip install bidsaid[surface]``.
@@ -156,22 +155,19 @@ def project_to_surface(
         Path to the functional NIfTI file or a functional NIfTI image (3D or 4D).
 
     pial_surfaces : :obj:`tuple[SurfaceMesh, SurfaceMesh]`
-        The ``(left, right)`` pial surfaces, as GIFTI file paths or
-        ``(coordinates, faces)`` tuples.
+        The ``(left, right)`` pial surfaces, as GIFTI file paths or  ``(coordinates, faces)`` tuples.
 
     white_surfaces : :obj:`tuple[SurfaceMesh, SurfaceMesh]` or :obj:`None`, default=None
-        The ``(left, right)`` white matter surfaces used as the inner mesh. Must have the same number
-        of vertices as ``pial_surfaces``.
+        The ``(left, right)`` white matter surfaces used as the inner mesh. Must have the same number of vertices as ``pial_surfaces``.
 
     cortex_masks : :obj:`list[NDArray[np.bool_]]` or :obj:`None`, default=None
-        The ``[left, right]`` cortex masks from :func:`get_cortex_masks`. Vertices outside the mask
-        (the medial wall) are set to 0.
+        The ``[left, right]`` cortex masks from :func:`get_cortex_masks`. Vertices outside the mask (the medial wall) are set to 0.
 
     fwhm : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
         Full width at half maximum (mm) of the Gaussian smoothing applied to the image before projection.
 
     max_volumes : :obj:`int` or :obj:`None`, default=None
-        Only project the first N volumes of a 4D image. Useful for testing.
+        Only project the first N volumes of a 4D image
 
     interpolation : :obj:`Literal["linear", "nearest"]`, default="linear"
         Interpolation used when sampling the image.
@@ -185,8 +181,8 @@ def project_to_surface(
     Returns
     -------
     list[NDArray[np.floating]]
-        A list of ``[left, right]`` arrays. Each has shape (n_vertices, n_volumes) for a
-        4D image or (n_vertices,) for a 3D image. Also, NaNs are replaced with 0.
+        A list of ``[left, right]`` arrays. Each has shape (n_vertices, n_volumes) for a 4D image or (n_vertices,) for a 3D image.
+        Also, NaNs are replaced with 0.
     """
     nifti_img = load_nifti(nifti_file_or_img)
     if max_volumes and nifti_img.ndim == 4:

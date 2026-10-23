@@ -1,36 +1,56 @@
 import numpy as np, pytest
 
-pv = pytest.importorskip("pyvista")
+pytest.importorskip("pyvista")
+pytest.importorskip("neuromaps")
 
-from bidsaid.visual import (
-    SurfaceRenderer,
-    create_polydata,
+from bidsaid.movie import virtual_display
+from bidsaid.simulate import simulate_nifti_image
+from bidsaid.surface import (
+    fetch_fsaverage_surfaces,
+    get_cortex_masks,
+    load_surface_mesh,
+    project_to_surface,
 )
+from bidsaid.visual import SurfaceRenderer, create_polydata
+
+
+@pytest.fixture(scope="session")
+def surfaces():
+    return fetch_fsaverage_surfaces("3k")
 
 
 @pytest.fixture(scope="module")
-def sphere_surfaces():
-    """Two spheres (left shifted -x, right shifted +x) as ``(coordinates, faces)``."""
-    sphere = pv.Sphere(radius=50)
-    coordinates = np.asarray(sphere.points)
-    faces = sphere.faces.reshape(-1, 4)[:, 1:]
-
-    return (coordinates - [60, 0, 0], faces), (coordinates + [60, 0, 0], faces)
+def coordinates(surfaces):
+    """The ``(left, right)`` vertex coordinates of the pial surfaces."""
+    return (
+        load_surface_mesh(surfaces["pial"][0])[0],
+        load_surface_mesh(surfaces["pial"][1])[0],
+    )
 
 
 @pytest.fixture(scope="module")
-def renderer(sphere_surfaces):
-    left_surface, right_surface = sphere_surfaces
-    sulcal_depths = (left_surface[0][:, 2], right_surface[0][:, 2])
+def surface_data(surfaces):
+    """A simulated image projected onto the surfaces as ``(lh, rh)`` arrays."""
+    return project_to_surface(
+        simulate_nifti_image((20, 20, 10, 3)),
+        surfaces["pial"],
+        surfaces["white"],
+        get_cortex_masks(surfaces["medial"]),
+    )
 
-    with SurfaceRenderer(
-        left_surface,
-        right_surface,
-        sulcal_depths=sulcal_depths,
-        size=(120, 90),
-        color_range=(-1, 1),
-        threshold=0.5,
-    ) as surface_renderer:
+
+@pytest.fixture(scope="module")
+def renderer(surfaces):
+    with (
+        virtual_display(),
+        SurfaceRenderer(
+            *surfaces["inflated"],
+            sulcal_depths=surfaces["sulc"],
+            size=(120, 90),
+            color_range=(-1, 1),
+            threshold=0.5,
+        ) as surface_renderer,
+    ):
         yield surface_renderer
 
 
@@ -50,26 +70,30 @@ def test_create_polydata(surface_mesh):
     assert np.array_equal(mesh.faces.reshape(-1, 4)[:, 1:], faces)
 
 
-def test_surface_renderer_updates_data(renderer, sphere_surfaces):
+def test_surface_renderer_updates_data(renderer, coordinates, surface_data):
     "Test consecutive frames reflect the data passed to ``render``."
-    (left_coordinates, _), (right_coordinates, _) = sphere_surfaces
+    left_coordinates, right_coordinates = coordinates
     n_left, n_right = left_coordinates.shape[0], right_coordinates.shape[0]
+    lh, rh = surface_data
 
     blank_frame = renderer.render()
     full_frame = renderer.render(np.full(n_left, 2.0), np.full(n_right, -2.0))
     half_frame = renderer.render(
-        np.where(left_coordinates[:, 0] > -60, 2.0, 0.0), np.full(n_right, -2.0)
+        np.where(left_coordinates[:, 0] > np.median(left_coordinates[:, 0]), 2.0, 0.0),
+        np.full(n_right, -2.0),
     )
+    projected_frame = renderer.render(lh[:, 0], rh[:, 0])
     second_blank_frame = renderer.render(np.full(n_left, np.nan), None)
 
     assert not frames_match(blank_frame, full_frame)
     assert not frames_match(full_frame, half_frame)
+    assert projected_frame.shape == blank_frame.shape
     assert frames_match(blank_frame, second_blank_frame)
 
 
-def test_surface_renderer_transparency(renderer, sphere_surfaces):
+def test_surface_renderer_transparency(renderer, coordinates):
     "Test zeros and values below the threshold are transparent."
-    (left_coordinates, _), (right_coordinates, _) = sphere_surfaces
+    left_coordinates, right_coordinates = coordinates
     n_left, n_right = left_coordinates.shape[0], right_coordinates.shape[0]
     blank_frame = renderer.render()
 
@@ -92,15 +116,15 @@ def test_surface_renderer_label(renderer):
     assert np.array_equal(blank_frame, renderer.render())
 
 
-def test_surface_renderer_views(sphere_surfaces):
+def test_surface_renderer_views(surfaces, surface_data):
     "Test named, custom and single-hemisphere views."
-    left_surface, right_surface = sphere_surfaces
+    _, rh = surface_data
     views = {"rh": ["dorsal", (0, 45, 0)]}
 
     with SurfaceRenderer(
-        left_surface, right_surface, views=views, size=(100, 80)
+        *surfaces["inflated"], views=views, size=(100, 80)
     ) as surface_renderer:
-        frame = surface_renderer.render(rh=np.ones(right_surface[0].shape[0]))
+        frame = surface_renderer.render(rh=rh[:, 0])
 
     assert surface_renderer.panels == [("rh", "dorsal"), ("rh", (0, 45, 0))]
     assert frame.shape == (80, 200, 3)

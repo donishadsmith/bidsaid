@@ -13,7 +13,8 @@ from .nuisance import compute_global_signal
 from .interpolate import (
     downsample_img,
     upsample_img,
+    upsample_array,
+    downsample_array,
     interpolate_censored_array,
     interpolate_censored_img,
-    compute_frame_timing,
 )

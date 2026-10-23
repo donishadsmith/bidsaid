@@ -144,6 +144,30 @@ from NIfTIs.
    compute_effective_echo_spacing
    compute_total_readout_time
 
+:mod:`bidsaid.movie`
+-----------------------
+Module for writing movies of surface data. Requires ``pip install bidsaid[movie]``.
+
+.. currentmodule:: bidsaid.movie
+
+.. autosummary::
+   :template: class.rst
+   :nosignatures:
+   :toctree: generated/
+
+   MovieWriter
+   SurfaceRun
+
+.. autosummary::
+   :template: function.rst
+   :nosignatures:
+   :toctree: generated/
+
+   create_surface_run
+   compute_frame_timing
+   compute_vmax
+   virtual_display
+
 :mod:`bidsaid.parsers`
 --------------------------
 Module containing functions to parse raw logs from stimulus
@@ -186,7 +210,6 @@ Module for quality control metrics and assessment of fMRI data.
    upsample_array
    interpolate_censored_array
    interpolate_censored_img
-   compute_frame_timing
 
 :mod:`bidsaid.simulate`
 --------------------------
