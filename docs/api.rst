@@ -167,6 +167,7 @@ Module for writing movies of surface data. Requires ``pip install bidsaid[movie]
    compute_frame_timing
    compute_vmax
    virtual_display
+   mp4_to_gif
 
 :mod:`bidsaid.parsers`
 --------------------------

@@ -9,3 +9,4 @@ target/
 *.pdb
 *.pyd
 *.lock
+assets/group_desc-surface_movie.gif

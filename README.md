@@ -188,35 +188,67 @@ consecutive_censor_mean, consecutive_censor_std = compute_consecutive_censor_sta
 
 ### Surface Movies
 ```python
-from bidsaid.movie import MovieWriter, compute_vmax, create_surface_run, virtual_display
+import tempfile
+from pathlib import Path
+
+import nibabel as nib, numpy as np
+from nilearn.image import smooth_img
+
+from bidsaid.movie import (
+    MovieWriter,
+    compute_vmax,
+    create_surface_run,
+    mp4_to_gif,
+    virtual_display,
+)
+from bidsaid.simulate import simulate_nifti_image
 from bidsaid.surface import fetch_fsaverage_surfaces, get_cortex_masks
 from bidsaid.visual import SurfaceRenderer
+
+
+def simulate_denoised_img():
+    nifti_img = simulate_nifti_image((64, 76, 64, 10))
+    mask = nifti_img.get_fdata().any(axis=-1)
+    data = smooth_img(nifti_img, fwhm=8).get_fdata()
+    data[mask] = (data[mask] - data[mask].mean(axis=-1, keepdims=True)) / data[
+        mask
+    ].std(axis=-1, keepdims=True)
+    data[~mask] = 0
+
+    return nib.Nifti1Image(data.astype(np.float32), nifti_img.affine, nifti_img.header)
+
+
+src_dir = Path(tempfile.mkdtemp())
+denoised_files = []
+for subject_id, task_name in (
+    (subject_id, task_name)
+    for subject_id in ("01", "02")
+    for task_name in ("rest", "music")
+):
+    denoised_file = (
+        src_dir / f"sub-{subject_id}_task-{task_name}_desc-denoised_bold.nii.gz"
+    )
+    nib.save(simulate_denoised_img(), denoised_file)
+    denoised_files.append(denoised_file)
 
 surfaces = fetch_fsaverage_surfaces("10k")
 cortex_masks = get_cortex_masks(surfaces["medial"])
 
-# One run per participant and task; the "sub" and "task" entities are read from the filename
 surface_runs = [
     create_surface_run(
         denoised_file,
         surfaces["pial"],
         surfaces["white"],
         cortex_masks,
-        n_interpolated_frames=1,  # smoother playback (display only)
-        fwhm=4,
+        n_interpolated_frames=47,
+        interpolation_method="cubic",
     )
-    for denoised_file in [
-        "sub-01_task-rest_desc-denoised_bold.nii.gz",
-        "sub-01_task-music_desc-denoised_bold.nii.gz",
-        "sub-02_task-rest_desc-denoised_bold.nii.gz",
-        "sub-02_task-music_desc-denoised_bold.nii.gz",
-    ]
+    for denoised_file in denoised_files
 ]
 
 threshold = 1.0
 vmax = compute_vmax(surface_runs, threshold=threshold)
 
-# virtual_display starts Xvfb for headless environments
 with (
     virtual_display(),
     SurfaceRenderer(
@@ -224,7 +256,7 @@ with (
         sulcal_depths=surfaces["sulc"],
         color_range=(-vmax, vmax),
         threshold=threshold,
-        top_spacing=80,  # space aboce brains for label
+        top_spacing=80,
     ) as renderer,
 ):
     movie_files = MovieWriter(
@@ -232,10 +264,11 @@ with (
         renderer,
         task_order=["rest", "music"],
         playback_speed=1,
-        label_format="{subject_name} {task_name} t = {frame_time:.1f} s",
+        label_format="{subject_name}    {task_name}    t = {frame_time:.1f} s",
+        task_spacing=40,
     ).write("movies", per_subject=True, per_task=True, shared=True)
-```
 
-Each participant is a row and each task a column. `per_subject` writes one movie per participant with their tasks side by side, `per_task` one movie per task with the participants stacked, and `shared` the full grid in a single movie.
+gif_file = mp4_to_gif(movie_files[-1], loop=0)
+```
 
 See the [API documentation](https://bidsaid.readthedocs.io/en/latest/api.html) for full parameter details and additional utilities.

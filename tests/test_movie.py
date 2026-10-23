@@ -12,6 +12,8 @@ from bidsaid.movie import (
     compute_vmax,
     create_surface_run,
     virtual_display,
+    compute_frame_timing,
+    mp4_to_gif,
 )
 from bidsaid.simulate import simulate_nifti_image
 from bidsaid.surface import get_cortex_masks
@@ -30,8 +32,15 @@ def renderer(surfaces):
         yield surface_renderer
 
 
+def test_compute_frame_timing():
+    "Test ``compute_frame_timing`1."
+    assert compute_frame_timing(2.0, 1, 24, 1) == (24.0, 24)
+    assert compute_frame_timing(2.0, 1, 24, 10) == (20.0, 2)
+    assert compute_frame_timing(2.0, 1, 24, None) == (24, 1)
+
+
 def test_movie_writer(tmp_dir, surfaces, renderer):
-    "Test projecting simulated images and writing the movies."
+    "Test ``MovieWriter`` and ``mp4_to_gif."
     dst_dir = Path(tmp_dir.name)
     cortex_masks = get_cortex_masks(surfaces["medial"])
 
@@ -54,7 +63,7 @@ def test_movie_writer(tmp_dir, surfaces, renderer):
         )
 
     assert surface_runs[0].n_frames == 7
-    assert surface_runs[0].display_name == "sub-01"
+    assert surface_runs[0].display_name == "01"
 
     vmax = compute_vmax(surface_runs)
     renderer.color_range = (-vmax, vmax)
@@ -67,4 +76,9 @@ def test_movie_writer(tmp_dir, surfaces, renderer):
     assert all(movie_file.exists() for movie_file in movie_files)
     with imageio.get_reader(str(dst_dir / "group_desc-surface_movie.mp4")) as reader:
         assert reader.count_frames() == 5 * 12
+        assert reader.get_data(0).shape[0] == 2 * 60
+
+    gif_file = mp4_to_gif(dst_dir / "group_desc-surface_movie.mp4", every_n_frames=12)
+    with imageio.get_reader(str(gif_file)) as reader:
+        assert reader.get_length() == 5
         assert reader.get_data(0).shape[0] == 2 * 60

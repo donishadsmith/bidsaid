@@ -180,9 +180,8 @@ class SurfaceRenderer:
     """
     Render Per-Vertex Data on Cortical Surfaces.
 
-    Builds the scene (meshes, views, lighting, colormaps) once and re-uses it for every call to :meth:`render`,
-    so rendering a frame only updates the vertex data. Each view of each hemisphere is a panel and ``layout``
-    controls how the panels are arranged.
+    Builds the scene (meshes, views, lighting, colormaps) once and re-uses it for every call to :meth:`render`, so rendering a frame
+    only updates the vertex data. Each view of each hemisphere is a panel and ``layout`` Scontrols how the panels are arranged.
 
     Parameters
     ----------
@@ -202,8 +201,7 @@ class SurfaceRenderer:
         places the hemispheres in columns (left, right) and the views in rows, in the order given in ``views``.
 
     sulcal_depths : :obj:`tuple[str | NDArray, str | NDArray]` or :obj:`None`, default=None
-        The ``(left, right)`` sulcal depth maps drawn underneath the data, as GIfTI file paths or arrays. If None,
-        a flat backdrop is drawn instead.
+        The ``(left, right)`` sulcal depth maps drawn underneath the data, as GIfTI file paths or arrays. If None, a flat backdrop is drawn instead.
 
     size : :obj:`tuple[int, int]`, default=(400, 300)
         Width and height of each panel in pixels.
@@ -222,7 +220,7 @@ class SurfaceRenderer:
         Colormap of the data. Nilearn and matplotlib colormap names are accepted.
 
     color_range : :obj:`tuple[float, float]`, default=(-3.0, 3.0)
-        The ``(vmin, vmax)`` of the colormap. Kept fixed across frames to avoid flickering.
+        The ``(vmin, vmax)`` of the colormap.
 
     threshold : :obj:`float`, default=0.0
         Vertices whose absolute value is below this threshold are transparent.
@@ -598,12 +596,10 @@ class SurfaceRenderer:
         Parameters
         ----------
         lh : :obj:`NDArray` or :obj:`None`, default=None
-            One value per vertex of the left surface. If None, the left hemisphere shows
-            only its backdrop.
+            One value per vertex of the left surface. If None, the left hemisphere shows only its backdrop.
 
         rh : :obj:`NDArray` or :obj:`None`, default=None
-            One value per vertex of the right surface. If None, the right hemisphere shows
-            only its backdrop.
+            One value per vertex of the right surface. If None, the right hemisphere shows only its backdrop.
 
         label : :obj:`str` or :obj:`None`, default=None
             Text drawn over the frame.
@@ -622,11 +618,14 @@ class SurfaceRenderer:
             An RGB image with shape (height, width, 3).
         """
         for hemisphere, data in (("lh", lh), ("rh", rh)):
-            mesh = self.meshes[hemisphere]
             if data is None:
-                mesh[_DATA_LAYER] = np.full(mesh.n_points, np.nan)
+                self.meshes[hemisphere][_DATA_LAYER] = np.full(
+                    self.meshes[hemisphere].n_points, np.nan
+                )
             else:
-                mesh[_DATA_LAYER] = self._mask_transparent(data, hemisphere)
+                self.meshes[hemisphere][_DATA_LAYER] = self._mask_transparent(
+                    data, hemisphere
+                )
 
         _validate_label_position(label_position, "label_position")
         _validate_anchor(label_anchor, "label_anchor")

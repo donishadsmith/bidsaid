@@ -9,7 +9,7 @@ Module for writing movies of surface data.
 import os, string, subprocess, sys, time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, NamedTuple, Generator
+from typing import Any, Generator, Literal, NamedTuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -96,6 +96,10 @@ def compute_frame_timing(
     return effective_fps * n_repeats_per_frame, n_repeats_per_frame
 
 
+def _add_entity_prefix(value: str, entity: str) -> str:
+    return f"{entity}-{value.removeprefix(f'{entity}-')}"
+
+
 class SurfaceRun(NamedTuple):
     """
     Per-Vertex Timeseries of One Participant and One Task.
@@ -120,12 +124,10 @@ class SurfaceRun(NamedTuple):
         The repetition time (seconds) of the original (not upsampled) data.
 
     n_interpolated_frames : :obj:`int`, default=0
-        The number of interpolated frames inserted in each gap between two real volumes
-        (see :func:`bidsaid.qc.upsample_array`). Used with ``tr`` to compute the time of each
-        frame (``frame_tr``).
+        The number of interpolated frames inserted in each gap between two real volumes (see :func:`bidsaid.qc.upsample_array`). Used with ``tr`` to compute the time of each frame (``frame_tr``).
 
     name : :obj:`str` or :obj:`None`, default=None
-        The name shown in the frame label. If None, "sub-{subject_id}" is used.
+        The name shown in the frame label. If None, ``subject_id`` is used.
 
     color_range : :obj:`tuple[float, float]` or :obj:`None`, default=None
         The ``(vmin, vmax)`` of the colormap for this run. If None, the color range of the renderer is used.
@@ -156,10 +158,6 @@ class SurfaceRun(NamedTuple):
         return self.name if self.name else self.subject_id
 
 
-def _add_subject_prefix(subject_id: str) -> str:
-    return f"sub-{subject_id.removeprefix('sub-')}"
-
-
 def create_surface_run(
     nifti_file_or_img: NiftiFileorImage,
     pial_surfaces: tuple[SurfaceMesh, SurfaceMesh],
@@ -170,7 +168,7 @@ def create_surface_run(
     name: str | None = None,
     tr: float | None = None,
     n_interpolated_frames: int = 0,
-    method: Literal["cubic", "pchip"] = "cubic",
+    interpolation_method: Literal["cubic", "pchip"] = "cubic",
     fwhm: float | int | None = None,
     max_volumes: int | None = None,
     color_range: tuple[float, float] | None = None,
@@ -197,10 +195,10 @@ def create_surface_run(
         The ``[left, right]`` cortex masks from :func:`bidsaid.surface.get_cortex_masks`. Vertices outside the mask (the medial wall) are set to 0.
 
     subject_id : :obj:`str` or :obj:`None`, default=None
-        The participant label without the "sub-" prefix. If None, it is read from the "sub" entity of the filename.
+        The participant label without the "sub-" prefix (e.g. "01"). If None, it is read from the "sub" entity of the filename.
 
     task_name : :obj:`str` or :obj:`None`, default=None
-        The task label. If None, it is read from the "task" entity of the filename.
+        The task label without the "task-" prefix (e.g. "rest"). If None, it is read from the "task" entity of the filename.
 
     name : :obj:`str` or :obj:`None`, default=None
         The name shown in the frame label. If None, defaults to ``subject_id``.
@@ -211,7 +209,7 @@ def create_surface_run(
     n_interpolated_frames : :obj:`int`, default=0
         The number of interpolated frames inserted in each gap between two real volumes.
 
-    method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
+    interpolation_method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
         The interpolation method used when ``n_interpolated_frames`` is greater than 0.
 
     fwhm : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
@@ -232,24 +230,24 @@ def create_surface_run(
         The surface run.
     """
     is_file = isinstance(nifti_file_or_img, (str, Path))
-    if subject_id is None:
-        subject_id = (
-            get_entity_value(nifti_file_or_img, "sub", True) if is_file else None
+    if not is_file and not all((subject_id, task_name)):
+        raise ValueError(
+            "``subject_id`` and ``task_name`` must be specified when ``nifti_file_or_img`` is an image."
         )
 
-    if task_name is None:
-        task_name = get_entity_value(nifti_file_or_img, "task") if is_file else None
+    if subject_id is None and is_file:
+        subject_id = get_entity_value(nifti_file_or_img, "sub")
+
+    if task_name is None and is_file:
+        task_name = get_entity_value(nifti_file_or_img, "task")
 
     if subject_id is None or task_name is None:
         raise ValueError(
             "``subject_id`` and ``task_name`` must be specified when they cannot be read from the filename."
         )
 
-    source = (
-        Path(nifti_file_or_img).name
-        if is_file
-        else f"sub-{subject_id} task-{task_name}"
-    )
+    source = Path(nifti_file_or_img).name if is_file else f"{subject_id} {task_name}"
+
     LGR.info(f"Projecting to surface: {source}")
     lh, rh = project_to_surface(
         nifti_file_or_img,
@@ -262,8 +260,12 @@ def create_surface_run(
     )
 
     if n_interpolated_frames > 0:
-        lh = upsample_array(lh, n_interpolated_frames, axis=1, method=method)
-        rh = upsample_array(rh, n_interpolated_frames, axis=1, method=method)
+        lh = upsample_array(
+            lh, n_interpolated_frames, axis=1, method=interpolation_method
+        )
+        rh = upsample_array(
+            rh, n_interpolated_frames, axis=1, method=interpolation_method
+        )
 
     return SurfaceRun(
         subject_id=subject_id,
@@ -437,7 +439,7 @@ class _MovieFile:
         target_fps: float,
         playback_speed: float | None,
         quality: int,
-        ffmpeg_params: list[str] | None,
+        ffmpeg_kwargs: list[str] | None,
     ):
         self.movie_file = movie_file
         self.n_frames = n_frames
@@ -455,7 +457,7 @@ class _MovieFile:
             fps=fps,
             quality=quality,
             macro_block_size=1,
-            output_params=ffmpeg_params or [],
+            output_params=ffmpeg_kwargs or [],
         )
 
     def append(self, frame: NDArray[np.uint8]) -> None:
@@ -496,7 +498,7 @@ class MovieWriter:
     target_fps : :obj:`float`, default=24
         The target frame rate of the movies. When ``playback_speed`` is None, each rendered frame is one output frame at exactly this rate.
 
-    playback_speed : :obj:`float`, default=1.0
+    playback_speed : :obj:`float` or :obj:`None`, default=1.0
         The speed relative to real time (e.g. 1 for real time and 10 for 10x faster than real time). If None, each rendered frame is
         one output frame at exactly ``target_fps``.
 
@@ -516,22 +518,24 @@ class MovieWriter:
         has a ``top_spacing`` or ``hemisphere_spacing``, else ``("left", "top")`` is used.
 
     task_spacing : :obj:`int`, default=0
-        Width in pixels of the empty space between the task columns of a row, filled with the
-        background color of the renderer.
+        Width in pixels of the empty space between the task columns of a row, filled with the background color of the renderer.
 
     subject_spacing : :obj:`int`, default=0
-        Height in pixels of the empty space between the participant rows of a movie, filled with  the background color of the renderer.
+        Height in pixels of the empty space between the participant rows of a movie, filled with the background color of the renderer.
 
     quality : :obj:`int`, default=8
         Video quality between 0 and 10 passed to ``imageio`` (higher is better and larger).
 
-    ffmpeg_params : :obj:`list[str]` or :obj:`None`, default=None
-        Extra output arguments passed to ``ffmpeg`` through ``imageio`` (its ``output_params``). Note that
-        ``["-preset", "ultrafast", "-tune", "zerolatency"]`` can be used to reduce memory usage when working with larger files.
+    ffmpeg_kwargs : :obj:`list[str]` or :obj:`None`, default=None
+        Extra output arguments passed to ``ffmpeg`` through ``imageio`` (its ``output_params``), as a flat list of command line
+        tokens (e.g. ``["-preset", "ultrafast"]``). See the `ffmpeg documentation <https://ffmpeg.org/ffmpeg.html#Options>`_ for
+        the available options and the `libx264 encoder options <https://ffmpeg.org/ffmpeg-codecs.html#libx264_002c-libx264rgb>`_ for the
+        default codec. Note that ``["-preset", "ultrafast", "-tune", "zerolatency"]`` can be used to reduce memory usage when working
+        with larger files.
 
     Examples
     --------
-    >>> from bidsaid.movie import MovieWriter, compute_vmax, create_surface_run
+    >>> from bidsaid.movie import MovieWriter, compute_vmax, create_surface_run, virtual_display
     >>> from bidsaid.surface import fetch_fsaverage_surfaces, get_cortex_masks
     >>> from bidsaid.visual import SurfaceRenderer
     >>> surfaces = fetch_fsaverage_surfaces("10k")
@@ -547,7 +551,7 @@ class MovieWriter:
     ...     for denoised_file in denoised_files
     ... ]
     >>> vmax = compute_vmax(surface_runs, threshold=1.0)
-    >>> with SurfaceRenderer(
+    >>> with virtual_display(), SurfaceRenderer(
     ...     *surfaces["inflated"],
     ...     sulcal_depths=surfaces["sulc"],
     ...     color_range=(-vmax, vmax),
@@ -564,14 +568,14 @@ class MovieWriter:
         renderer: SurfaceRenderer,
         task_order: list[str] | None = None,
         target_fps: float = 24,
-        playback_speed: float = 1.0,
+        playback_speed: float | None = 1.0,
         label_format: str | None = DEFAULT_LABEL_FORMAT,
         label_position: tuple[float, float] | None = None,
         label_anchor: LabelAnchor | None = None,
         task_spacing: int = 0,
         subject_spacing: int = 0,
         quality: int = 8,
-        ffmpeg_params: list[str] | None = None,
+        ffmpeg_kwargs: list[str] | None = None,
     ):
         if not surface_runs:
             raise ValueError("``surface_runs`` must contain at least one run.")
@@ -612,7 +616,7 @@ class MovieWriter:
         self.task_spacing = task_spacing
         self.subject_spacing = subject_spacing
         self.quality = quality
-        self.ffmpeg_params = list(ffmpeg_params) if ffmpeg_params else None
+        self.ffmpeg_kwargs = list(ffmpeg_kwargs) if ffmpeg_kwargs else None
         self._label_fields = _get_label_fields(label_format) if label_format else set()
 
         self.grid: dict[str, dict[str, SurfaceRun]] = {}
@@ -621,7 +625,7 @@ class MovieWriter:
             tasks = self.grid.setdefault(surface_run.subject_id, {})
             if surface_run.task_name in tasks:
                 raise ValueError(
-                    f"Duplicate run for sub-{surface_run.subject_id} and task "
+                    f"Duplicate run for {_add_entity_prefix(surface_run.subject_id, "sub")} and task "
                     f"{surface_run.task_name}."
                 )
 
@@ -635,13 +639,13 @@ class MovieWriter:
         """Raise if the hemispheres of a run are not 2D arrays with the same number of frames."""
         if surface_run.lh.ndim != 2 or surface_run.rh.ndim != 2:
             raise ValueError(
-                f"The hemispheres of sub-{surface_run.subject_id} task {surface_run.task_name} "
+                f"The hemispheres of {_add_entity_prefix(surface_run.subject_id, "sub")} task {surface_run.task_name} "
                 "must be 2D (n_vertices, n_frames) arrays."
             )
 
         if surface_run.lh.shape[1] != surface_run.rh.shape[1]:
             raise ValueError(
-                f"The hemispheres of sub-{surface_run.subject_id} task {surface_run.task_name} "
+                f"The hemispheres of {_add_entity_prefix(surface_run.subject_id, "sub")} task {surface_run.task_name} "
                 f"have a different number of frames ({surface_run.lh.shape[1]} and "
                 f"{surface_run.rh.shape[1]})."
             )
@@ -756,7 +760,7 @@ class MovieWriter:
 
         if len({run.frame_tr for run in surface_runs}) > 1:
             LGR.warning(
-                f"Runs of {description} differ in TR or ``n_interpolated_frames``, the movie uses the timing of sub-{surface_runs[0].subject_id} "
+                f"Runs of {description} differ in TR or ``n_interpolated_frames``, the movie uses the timing of {_add_entity_prefix(surface_runs[0].subject_id, "sub")} "
                 f"task  {surface_runs[0].task_name} so panels will play at different speeds relative to real time."
             )
 
@@ -773,7 +777,7 @@ class MovieWriter:
             self.target_fps,
             self.playback_speed,
             self.quality,
-            self.ffmpeg_params,
+            self.ffmpeg_kwargs,
         )
 
     def write(
@@ -827,15 +831,16 @@ class MovieWriter:
                 for subject_id, tasks in self.grid.items():
                     subject_movies[subject_id] = self._open_movie(
                         dst_dir
-                        / f"{_add_subject_prefix(subject_id)}_desc-{desc}_movie.mp4",
+                        / f"{_add_entity_prefix(subject_id, "sub")}_desc-{desc}_movie.mp4",
                         list(tasks.values()),
-                        f"sub-{subject_id}",
+                        _add_entity_prefix(subject_id, "sub"),
                     )
 
             if per_task:
                 for task_name in self.task_names:
                     task_movies[task_name] = self._open_movie(
-                        dst_dir / f"task-{task_name}_desc-{desc}_movie.mp4",
+                        dst_dir
+                        / f"{_add_entity_prefix(task_name, 'task')}_desc-{desc}_movie.mp4",
                         [
                             tasks[task_name]
                             for tasks in self.grid.values()
@@ -977,6 +982,63 @@ class MovieWriter:
         return np.concatenate(images, axis=axis)
 
 
+def mp4_to_gif(
+    mp4_file: str | Path,
+    gif_file: str | Path | None = None,
+    every_n_frames: int = 1,
+    **pillow_kwargs: Any,
+) -> Path:
+    """
+    Convert a Movie to a GIF.
+
+    Reads every ``every_n_frames``-th frame of the movie and writes them as an animated GIF with Pillow. Unless a timing is given in ``pillow_kwargs``,
+    the GIF plays at the speed of the movie (each kept frame lasts ``every_n_frames / fps`` seconds).
+
+    Parameters
+    ----------
+    mp4_file : :obj:`str` or :obj:`Path`
+        Path to the mp4 movie.
+
+    gif_file : :obj:`str`, :obj:`Path`, or :obj:`None`, default=None
+        Path of the GIF to write. If None, the movie's path with a ".gif" extension is used.
+
+    every_n_frames : :obj:`int`, default=1
+        Keep one frame out of every ``every_n_frames`` frames of the movie (1 keeps every frame).
+
+    **pillow_kwargs : :obj:`Any`
+        Keyword arguments passed to ``imageio.mimsave`` for the Pillow GIF writer, such as  ``duration`` (milliseconds per frame) or ``loop`` (0 to loop forever, the default). See the
+        `Pillow GIF documentation <https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif>`_ for the available options.
+
+    Returns
+    -------
+    Path
+        The GIF file that was written.
+    """
+    mp4_file = Path(mp4_file)
+    if (ext := mp4_file.suffix) != ".mp4":
+        raise ValueError(f"``mp4_file`` does not have an '.mp4' extension: '{ext}'")
+
+    if every_n_frames < 1:
+        raise ValueError("``every_n_frames`` must be 1 or greater.")
+
+    gif_file = Path(gif_file) if gif_file is not None else mp4_file.with_suffix(".gif")
+
+    with imageio.get_reader(str(mp4_file)) as reader:
+        if not {"duration", "fps"} & set(pillow_kwargs):
+            pillow_kwargs["duration"] = (
+                every_n_frames / reader.get_meta_data()["fps"] * 1000
+            )
+
+        frames = [
+            frame for index, frame in enumerate(reader) if index % every_n_frames == 0
+        ]
+
+    imageio.mimsave(str(gif_file), frames, **pillow_kwargs)
+    LGR.info(f"Saved GIF with {len(frames)} frames to: {gif_file}")
+
+    return gif_file
+
+
 __all__ = [
     "DEFAULT_LABEL_FORMAT",
     "LABEL_FIELDS",
@@ -985,5 +1047,6 @@ __all__ = [
     "compute_frame_timing",
     "compute_vmax",
     "create_surface_run",
+    "mp4_to_gif",
     "virtual_display",
 ]

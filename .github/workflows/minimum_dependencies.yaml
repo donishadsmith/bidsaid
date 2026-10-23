@@ -38,6 +38,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1 libxrender1 libxcursor1 libxft2 libxinerama1
 
+      - name: Set up FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          ffmpeg-version: 'release'
+
       - name: Set up headless display for rendering tests
         uses: pyvista/setup-headless-display-action@v4
 

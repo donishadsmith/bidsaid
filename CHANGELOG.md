@@ -4,6 +4,13 @@ Documentation of changes for each version of ``BIDS-Aid``.
 
 **Currently doesn't follow semantic versioning.**
 
+## [0.34.0] - 2026-10-23
+- Added ``mp4_to_gif`` in the ``movie`` module
+- Also added `ffmpeg` to imageio in pyproject
+
+## [0.28.0] to [0.33.0]
+- Forgot to document these, and will not be doing so
+
 ## [0.27.0] - 2026-06-04
 - Removes return_some_path parameters from functions
 
