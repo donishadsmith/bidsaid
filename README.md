@@ -271,4 +271,6 @@ with (
 gif_file = mp4_to_gif(movie_files[-1], loop=0)
 ```
 
+![Surface Movie](assets/group_desc-surface_movie.gif)
+
 See the [API documentation](https://bidsaid.readthedocs.io/en/latest/api.html) for full parameter details and additional utilities.
