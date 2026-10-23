@@ -9,7 +9,7 @@ license = "MIT"
 authors = [{name = "Donisha Smith", email = "dsmit420@jhu.edu"}]
 description = "A toolkit for creating and managing BIDS-compliant fMRI datasets without original DICOMs."
 readme = "README.md"
-requires-python = ">=3.11.0"
+requires-python = ">=3.11, !=3.15.*"
 
 keywords = [
     "python",
@@ -28,7 +28,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Programming Language :: Python :: 3.15",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: POSIX :: Linux",
     "Operating System :: Microsoft :: Windows :: Windows 11",
