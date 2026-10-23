@@ -9,7 +9,7 @@ license = "MIT"
 authors = [{name = "Donisha Smith", email = "dsmit420@jhu.edu"}]
 description = "A toolkit for creating and managing BIDS-compliant fMRI datasets without original DICOMs."
 readme = "README.md"
-requires-python = ">=3.10.0"
+requires-python = ">=3.11.0"
 
 keywords = [
     "python",
