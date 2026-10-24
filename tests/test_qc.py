@@ -254,8 +254,8 @@ def test_regress_confounds():
         nilearn_img = clean_img(
             nifti_img,
             confounds=confounds,
-            detrend=None,
-            standardize=None,
+            detrend=False,
+            standardize=False,
             t_r=nifti_img.header.get_zooms()[-1],
             clean__sample_mask=retained_volumes,
         )
