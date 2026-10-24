@@ -9,6 +9,7 @@ from .censoring import (
     compute_consecutive_censor_stats,
     get_n_censored_volumes,
 )
+from .denoise import regress_confounds, regress_confounds_array
 from .nuisance import compute_global_signal
 from .interpolate import (
     downsample_img,

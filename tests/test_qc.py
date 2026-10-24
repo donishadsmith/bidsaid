@@ -15,6 +15,7 @@ from bidsaid.qc import (
     downsample_img,
     upsample_img,
     interpolate_censored_img,
+    regress_confounds,
 )
 
 
@@ -223,3 +224,34 @@ def test_interpolate_censored_img(tmp_dir, nifti_img_and_path):
         interpolated_data[..., 1], expected_interior, rtol=1e-4, atol=1e-4
     )
     np.testing.assert_allclose(interpolated_data[..., 4], img_data[..., 3], rtol=1e-6)
+
+
+def test_regress_confounds():
+    """Test for ``regress_confounds``"""
+    from nilearn.image import clean_img
+
+    from bidsaid.simulate import simulate_nifti_image
+
+    nifti_img = simulate_nifti_image((20, 20, 10, 30))
+    confounds = pd.DataFrame({"confound": np.random.default_rng(0).normal(size=30)})
+    censor_mask = np.ones(30, dtype=int)
+    censor_mask[[0, 1, 15]] = 0
+    retained_volumes = np.flatnonzero(censor_mask)
+
+    denoised_img = regress_confounds(nifti_img, confounds, censor_mask)
+    assert denoised_img.shape == nifti_img.shape
+
+    nilearn_img = clean_img(
+        nifti_img,
+        confounds=confounds,
+        detrend=False,
+        standardize=None,
+        t_r=nifti_img.header.get_zooms()[-1],
+        clean__sample_mask=retained_volumes,
+    )
+    np.testing.assert_allclose(
+        denoised_img.get_fdata()[..., retained_volumes],
+        nilearn_img.get_fdata(),
+        rtol=1e-4,
+        atol=1e-4,
+    )

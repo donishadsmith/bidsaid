@@ -13,8 +13,7 @@ LGR = setup_logger(__name__)
 
 def compute_n_dummy_scans(confounds_file_or_df: str | Path | pd.DataFrame) -> int:
     """
-    Compute the number of dummy scans based on the number
-    of "non_steady_state_outlier_XX" columns in an fMRIPrep
+    Compute the number of dummy scans based on the number of "non_steady_state_outlier_XX" columns in an fMRIPrep
     confounds TSV file.
 
     Parameters
@@ -49,17 +48,15 @@ def _get_input_data(
     Parameters
     ----------
     input_data : :obj:`str`, :obj:`Path`, :obj:`pandas.DataFrame`, or :obj:`NDArray`
-        Input data containing values to threshold. Can be a path to a text
-        file (where delimiter is whitespace, tabs, or commas), a DataFrame,
-        or a 1D numpy array.
+        Input data containing values to threshold. Can be a path to a text file (where delimiter is
+        whitespace, tabs, or commas), a DataFrame, or a 1D numpy array.
 
     column_name : :obj:`str` or :obj:`None`, default=None
         Name of the column to extract from DataFrame or file. If None and
         input is a DataFrame/file, uses the first column.
 
     has_header : :obj:`bool`, default=True
-        Whether the input file has a header row. Only used when ``input_data``
-        is a file path.
+        Whether the input file has a header row. Only used when ``input_data`` is a file path.
 
     verbose : :obj:`bool`, default=False
         Logs "INFO" level information if True.
@@ -122,8 +119,7 @@ def compute_framewise_displacement(
              are rotation parameters in radians or degrees.
 
     has_header : :obj:`bool`, default=True
-        Whether the input file has a header row. Only used when ``input_data``
-        is a file path.
+        Whether the input file has a header row. Only used when ``input_data`` is a file path.
 
     rotation_units : :obj:`Literal["radians", "degrees"]`, default="radians"
         The units of the rotation parameters.
@@ -201,24 +197,20 @@ def create_censor_mask(
     Parameters
     ----------
     input_data : :obj:`str`, :obj:`Path`, :obj:`pandas.DataFrame`, or :obj:`NDArray`
-        Input data containing values to threshold. Can be a path to a text
-        file (where delimiter is whitespace, tabs, or commas), a DataFrame,
-        or a 1D numpy array.
+        Input data containing values to threshold. Can be a path to a text file (where delimiter is whitespace,
+        tabs, or commas), a DataFrame, or a 1D numpy array.
 
     column_name : :obj:`str` or :obj:`None`, default=None
-        Name of the column to extract from DataFrame or file. If None and
-        input is a DataFrame/file, uses the first column.
+        Name of the column to extract from DataFrame or file. If None and input is a DataFrame/file, uses the first column.
 
     threshold : :obj:`float` or :obj:`None`, default=None
-        Values exceeding this threshold will be censored (set to 0 in mask).
-        If None, no threshold-based censoring is applied.
+        Values exceeding this threshold will be censored (set to 0 in mask). If None, no threshold-based censoring is applied.
 
     n_dummy_scans : :obj:`int`, default=0
         Number of non-steady-state scans to censor.
 
     has_header : :obj:`bool`, default=True
-        Whether the input file has a header row. Only used when ``input_data``
-        is a file path.
+        Whether the input file has a header row. Only used when ``input_data`` is a file path.
 
     verbose : :obj:`bool`, default=False
         Logs "INFO" level information if True.
