@@ -2,7 +2,8 @@
 
 Documentation of changes for each version of ``BIDS-Aid``.
 
-**Currently doesn't follow semantic versioning.**
+## [0.35.0] - 2026-10-23
+- Add a simple regression module that doesnt auto censor or auto demean the output
 
 ## [0.34.0] - 2026-10-23
 - Added ``mp4_to_gif`` in the ``movie`` module
