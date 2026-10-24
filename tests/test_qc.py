@@ -241,14 +241,25 @@ def test_regress_confounds():
     denoised_img = regress_confounds(nifti_img, confounds, censor_mask)
     assert denoised_img.shape == nifti_img.shape
 
-    nilearn_img = clean_img(
-        nifti_img,
-        confounds=confounds,
-        detrend=False,
-        standardize=None,
-        t_r=nifti_img.header.get_zooms()[-1],
-        clean__sample_mask=retained_volumes,
-    )
+    try:
+        nilearn_img = clean_img(
+            nifti_img,
+            confounds=confounds,
+            detrend=False,
+            standardize=None,
+            t_r=nifti_img.header.get_zooms()[-1],
+            clean__sample_mask=retained_volumes,
+        )
+    except:
+        nilearn_img = clean_img(
+            nifti_img,
+            confounds=confounds,
+            detrend=None,
+            standardize=None,
+            t_r=nifti_img.header.get_zooms()[-1],
+            clean__sample_mask=retained_volumes,
+        )
+
     np.testing.assert_allclose(
         denoised_img.get_fdata()[..., retained_volumes],
         nilearn_img.get_fdata(),
