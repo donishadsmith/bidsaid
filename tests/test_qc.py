@@ -1,7 +1,7 @@
 import io
 from pathlib import Path
 
-import numpy as np, pandas as pd, pytest
+import nibabel as nib, numpy as np, pandas as pd, pytest
 
 from bidsaid.qc import (
     compute_n_dummy_scans,
@@ -16,6 +16,8 @@ from bidsaid.qc import (
     upsample_img,
     interpolate_censored_img,
     regress_confounds,
+    zscore_img,
+    zscore_to_reference,
 )
 
 
@@ -129,9 +131,9 @@ def test_compute_consecutive_censor_stats():
 
 def test_compute_global_signal():
     "Test for ``compute_global_signal``."
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    nifti_img = simulate_nifti_image((3, 3, 3, 10))
+    nifti_img = simulate_nifti_img((3, 3, 3, 10))
 
     result = compute_global_signal(nifti_img)
 
@@ -177,21 +179,19 @@ def test_interpolation(nifti_img_and_path):
     """Test for ``upsample_img`` and ``downsample_img``"""
     img, _ = nifti_img_and_path
 
-    upsampled_image = upsample_img(img, 2)
+    upsampled_img = upsample_img(img, 2)
     # should be 4 gaps, 2 new frames = 8 + 5 original frames = 13
     # tr = 1 / (2 + 1)
-    assert upsampled_image.shape[-1] == 13
-    np.testing.assert_allclose(
-        upsampled_image.header.get_zooms()[-1], 0.33333, rtol=1e-4
-    )
+    assert upsampled_img.shape[-1] == 13
+    np.testing.assert_allclose(upsampled_img.header.get_zooms()[-1], 0.33333, rtol=1e-4)
 
-    downsampled_image = downsample_img(upsampled_image, 2)
-    assert downsampled_image.shape[-1] == 5
+    downsampled_img = downsample_img(upsampled_img, 2)
+    assert downsampled_img.shape[-1] == 5
     np.testing.assert_allclose(
-        downsampled_image.header.get_zooms()[-1], 0.99
+        downsampled_img.header.get_zooms()[-1], 0.99
     )  # close enough
 
-    np.testing.assert_allclose(img.get_fdata(), downsampled_image.get_fdata())
+    np.testing.assert_allclose(img.get_fdata(), downsampled_img.get_fdata())
 
 
 def test_interpolate_censored_img(tmp_dir, nifti_img_and_path):
@@ -230,9 +230,9 @@ def test_regress_confounds():
     """Test for ``regress_confounds``"""
     from nilearn.image import clean_img
 
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    nifti_img = simulate_nifti_image((20, 20, 10, 30))
+    nifti_img = simulate_nifti_img((20, 20, 10, 30))
     confounds = pd.DataFrame({"confound": np.random.default_rng(0).normal(size=30)})
     censor_mask = np.ones(30, dtype=int)
     censor_mask[[0, 1, 15]] = 0
@@ -265,4 +265,54 @@ def test_regress_confounds():
         nilearn_img.get_fdata(),
         rtol=1e-4,
         atol=1e-4,
+    )
+
+
+def test_zscore_img():
+    """Test for ``zscore_img``"""
+    from bidsaid.simulate import simulate_nifti_img
+
+    nifti_img = simulate_nifti_img((20, 20, 10, 30))
+    zscored_img = zscore_img(nifti_img)
+
+    assert zscored_img.shape == nifti_img.shape
+    np.testing.assert_allclose(zscored_img.affine, nifti_img.affine)
+
+    zscored_fdata = zscored_img.get_fdata()
+    varying = nifti_img.get_fdata().std(axis=-1) > 0
+    assert np.all(np.isfinite(zscored_fdata[varying]))
+    np.testing.assert_allclose(zscored_fdata[varying].mean(axis=-1), 0, atol=1e-5)
+    np.testing.assert_allclose(zscored_fdata[varying].std(axis=-1), 1, rtol=0.02)
+
+
+def test_zscore_to_reference():
+    """Test for ``zscore_to_reference``"""
+    from bidsaid.simulate import simulate_nifti_img
+
+    reference_img = simulate_nifti_img((20, 20, 10, 30))
+    reference_fdata = reference_img.get_fdata()
+
+    zscored_img = zscore_to_reference(reference_img, reference_img)
+    zscored_fdata = zscored_img.get_fdata()
+    varying = reference_fdata.std(axis=-1) > 0
+    np.testing.assert_allclose(zscored_fdata[varying].mean(axis=-1), 0, atol=1e-5)
+    np.testing.assert_allclose(
+        zscored_fdata[varying].std(axis=-1, ddof=1), 1, rtol=1e-4
+    )
+    assert np.all(zscored_fdata[~varying] == 0)
+
+    shifted_fdata = reference_fdata * 1.5
+    shifted_voxels = varying & (np.random.default_rng(0).random(varying.shape) < 0.2)
+    offsets = 2 * reference_fdata.std(axis=-1, ddof=1, keepdims=True)
+    shifted_fdata[shifted_voxels] += 1.5 * offsets[shifted_voxels]
+    shifted_img = nib.Nifti1Image(
+        shifted_fdata[..., :20], reference_img.affine, reference_img.header
+    )
+
+    zscored_img = zscore_to_reference(shifted_img, reference_img)
+    zscored_fdata = zscored_img.get_fdata()
+    assert zscored_img.shape == shifted_img.shape
+    np.testing.assert_allclose(zscored_fdata[shifted_voxels].mean(), 2, atol=0.2)
+    np.testing.assert_allclose(
+        zscored_fdata[varying & ~shifted_voxels].mean(), 0, atol=0.2
     )

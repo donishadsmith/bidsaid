@@ -50,8 +50,8 @@ def test_is_nifti_truncated(nifti_img_and_path):
         bids_io.is_nifti_truncated("test.nii.gz")
 
 
-def test_compress_image(nifti_img_and_path):
-    """Test for ``compress_image``."""
+def test_compress_img(nifti_img_and_path):
+    """Test for ``compress_img``."""
     import numpy as np
 
     img, img_path = nifti_img_and_path
@@ -60,7 +60,7 @@ def test_compress_image(nifti_img_and_path):
     assert len(files) == 1
     assert files[0].suffix == ".nii"
 
-    bids_io.compress_image(img_path, remove_src_file=True, compression_level=9)
+    bids_io.compress_img(img_path, remove_src_file=True, compression_level=9)
 
     files = list(img_path.parent.glob("*"))
     assert len(files) == 1

@@ -2,7 +2,7 @@ import nibabel as nib
 import pytest
 
 from bidsaid._decorators import check_all_none, check_nifti
-from bidsaid.simulate import simulate_nifti_image
+from bidsaid.simulate import simulate_nifti_img
 
 
 def test_check_all_none():
@@ -23,7 +23,7 @@ def test_check_all_none():
 
 def test_check_nifti():
     """Test ``check_nifti`` decorator"""
-    img = simulate_nifti_image((10, 10, 10, 10))
+    img = simulate_nifti_img((10, 10, 10, 10))
     img.header["qform_code"] = 0
     img.header["sform_code"] = 1
 

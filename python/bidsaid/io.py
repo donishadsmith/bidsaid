@@ -45,7 +45,7 @@ def load_nifti(
     return nifti_img
 
 
-def compress_image(
+def compress_img(
     nifti_file: str | Path,
     dst_dir: str | Path | None = None,
     remove_src_file: bool = False,
@@ -142,7 +142,7 @@ def get_nifti_header(
     return load_nifti(nifti_file_or_img).header
 
 
-def compute_uncompressed_image_size(nifti_file: str | Path) -> int:
+def compute_uncompressed_img_size(nifti_file: str | Path) -> int:
     """
     Compute Uncompressed NiFTI Image Size
 
@@ -192,7 +192,7 @@ def is_nifti_truncated(nifti_file: str | Path) -> bool:
     bytes_per_voxel = hdr.get_data_dtype().itemsize
     expected_data_bytes = n_voxels * bytes_per_voxel
 
-    actual_data_bytes = compute_uncompressed_image_size(nifti_file)
+    actual_data_bytes = compute_uncompressed_img_size(nifti_file)
 
     if actual_data_bytes < expected_data_bytes:
         LGR.warning(
@@ -300,7 +300,7 @@ def truncate_nifti_to_complete_volumes(
     """
     nifti_img = nib.load(nifti_file)
 
-    available_bytes = compute_uncompressed_image_size(nifti_file)
+    available_bytes = compute_uncompressed_img_size(nifti_file)
     bytes_per_volume = (
         math.prod(nifti_img.shape[:3]) * nifti_img.get_data_dtype().itemsize
     )
@@ -309,7 +309,7 @@ def truncate_nifti_to_complete_volumes(
     if n_volumes_retained < nifti_img.shape[3]:
         LGR.warning(f"Percentage of volumes kept: {n_volumes_retained}")
 
-        truncated_image = nifti_img.slicer[..., :n_volumes_retained]
+        truncated_img = nifti_img.slicer[..., :n_volumes_retained]
 
         if new_nifti_filename:
             new_nifti_filename = Path(new_nifti_filename)
@@ -317,18 +317,18 @@ def truncate_nifti_to_complete_volumes(
 
         nifti_filename = new_nifti_filename if new_nifti_filename else nifti_file
 
-        nib.save(truncated_image, nifti_filename)
+        nib.save(truncated_img, nifti_filename)
 
 
 __all__ = [
     "load_nifti",
-    "compress_image",
+    "compress_img",
     "is_nifti_truncated",
     "regex_glob",
     "get_nifti_header",
     "get_nifti_affine",
     "replace_ext",
-    "compute_uncompressed_image_size",
+    "compute_uncompressed_img_size",
     "truncate_nifti_to_complete_volumes",
     "NiftiFileorImage",
 ]

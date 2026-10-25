@@ -167,7 +167,7 @@ def get_n_volumes(nifti_file_or_img: NiftiFileorImage) -> int:
     return img.get_fdata().shape[-1]
 
 
-def get_image_orientation(
+def get_img_orientation(
     nifti_file_or_img: NiftiFileorImage,
 ) -> tuple[dict[str, str], tuple[str, str, str]]:
     """
@@ -191,10 +191,10 @@ def get_image_orientation(
 
     Examples
     --------
-    >>> from bidsaid.simulate import simulate_nifti_image
-    >>> from bidsaid.metadata import get_image_orientation
-    >>> img = simulate_nifti_image((10, 10, 10, 10))
-    >>> get_image_orientation(img)
+    >>> from bidsaid.simulate import simulate_nifti_img
+    >>> from bidsaid.metadata import get_img_orientation
+    >>> img = simulate_nifti_img((10, 10, 10, 10))
+    >>> get_img_orientation(img)
         ({"i": "L -> R", "j": "P -> A", "k": "I -> S"}, ("R", "A", "S"))
 
     References
@@ -245,12 +245,12 @@ def direction_to_voxel_axis(
     Example
     -------
     Assuming image has RAS orientation
-    >>> from bidsaid.simulate import simulate_nifti_image
-    >>> nifti_img = simulate_nifti_image(img_shape=(5, 5, 5, 5))
+    >>> from bidsaid.simulate import simulate_nifti_img
+    >>> nifti_img = simulate_nifti_img(img_shape=(5, 5, 5, 5))
     >>> direction_to_voxel_axis(nifti_img, ("A", "P"))
         ("j", 2)
     """
-    _, orientation = get_image_orientation(nifti_file_or_img)
+    _, orientation = get_img_orientation(nifti_file_or_img)
 
     arr = np.array(orientation)
     voxel_index = int(np.where(np.isin(arr, anatomical_directions))[0][0])
@@ -869,7 +869,7 @@ def get_scanner_info(
     return manufacturer_name, model_name
 
 
-def infer_task_from_image(
+def infer_task_from_img(
     nifti_file_or_img: NiftiFileorImage,
     task_volume_map: dict[str, int] | dict[int, str],
 ) -> str:
@@ -892,11 +892,11 @@ def infer_task_from_image(
 
     Example
     -------
-    >>> from bidsaid.io import simulate_nifti_image
-    >>> from bidsaid.metadata import infer_task_from_image
-    >>> img = simulate_nifti_image((100, 100, 100, 260))
+    >>> from bidsaid.io import simulate_nifti_img
+    >>> from bidsaid.metadata import infer_task_from_img
+    >>> img = simulate_nifti_img((100, 100, 100, 260))
     >>> task_volume_map = {"flanker": 300, "nback": 260}
-    >>> infer_task_from_image(img, task_volume_map)
+    >>> infer_task_from_img(img, task_volume_map)
         "nback"
     """
     n_volumes = get_n_volumes(nifti_file_or_img)
@@ -1026,14 +1026,14 @@ __all__ = [
     "determine_slice_axis",
     "get_hdr_metadata",
     "get_n_volumes",
-    "get_image_orientation",
+    "get_img_orientation",
     "direction_to_voxel_axis",
     "get_n_slices",
     "get_tr",
     "create_slice_timing",
     "is_3d_img",
     "get_scanner_info",
-    "infer_task_from_image",
+    "infer_task_from_img",
     "get_recon_matrix_pe",
     "compute_effective_echo_spacing",
     "compute_total_readout_time",

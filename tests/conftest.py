@@ -3,7 +3,7 @@ from pathlib import Path
 
 import nibabel as nib, numpy as np, pytest
 
-from bidsaid.simulate import simulate_nifti_image
+from bidsaid.simulate import simulate_nifti_img
 
 
 @pytest.fixture(autouse=False, scope="function")
@@ -18,7 +18,7 @@ def tmp_dir():
 
 @pytest.fixture(autouse=False, scope="function")
 def nifti_img_and_path(tmp_dir):
-    img = simulate_nifti_image((20, 20, 10, 5))
+    img = simulate_nifti_img((20, 20, 10, 5))
     img_path = Path(tmp_dir.name) / "img.nii"
     nib.save(img, img_path)
 

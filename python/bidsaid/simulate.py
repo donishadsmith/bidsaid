@@ -19,7 +19,7 @@ from .logging import setup_logger
 LGR = setup_logger(__name__)
 
 
-def simulate_nifti_image(
+def simulate_nifti_img(
     img_shape: tuple[int, int, int] | tuple[int, int, int, int],
 ) -> nib.Nifti1Image:
     """
@@ -213,7 +213,7 @@ def _create_sub_files(
         base_filename = _strip_none_entities(
             f"sub-{sub_id + 1}_ses-{session_id}_task-{task_name}_run-{run_id + 1}"
         )
-        nifti_img = simulate_nifti_image((97, 115, 98, 50))
+        nifti_img = simulate_nifti_img((97, 115, 98, 50))
         root_filename = base_filename + "_bold.nii.gz"
         nib.save(nifti_img, sub_root_dir / root_filename)
         derivatives_filename = (
@@ -224,4 +224,4 @@ def _create_sub_files(
     return None
 
 
-__all__ = ["simulate_nifti_image", "create_affine", "simulate_bids_dataset"]
+__all__ = ["simulate_nifti_img", "create_affine", "simulate_bids_dataset"]

@@ -13,7 +13,7 @@ from numpy.typing import NDArray
 
 try:
     import pyvista as pv
-    from vtkmodules.vtkRenderingCore import vtkRenderer
+    from vtkmodules.vtkRenderingCore import vtkMapper, vtkRenderer
 except ImportError as error:
     raise ImportError(
         "``pyvista`` is required for ``bidsaid.visual``. Install it with ``pip install bidsaid[visual]``."
@@ -60,10 +60,22 @@ _SHADING = {"ambient": 0.05, "diffuse": 1.0, "specular": 0.1, "specular_power": 
 
 _SULCAL_LAYER, _DATA_LAYER = "sulcal_depth", "surface_data"
 
+_N_COLORS = 256
+
 DARK_SULCAL_CMAP = LinearSegmentedColormap.from_list(
     "dark_sulcal_depth", ["#4d4d4d", "#1f1f1f"]
 )
 """Dark gray shading of the folding pattern of gyri and sulci, respectively."""
+
+
+def _set_lookup_table_opacity(
+    data_actor: "pv.Actor", opcacity: NDArray[np.floating]
+) -> None:
+    """Set the alpha channel of the lookup table of an actor from opacities between 0 and 1."""
+    lookup_table = data_actor.mapper.lookup_table
+    table_values = np.array(lookup_table.values)
+    table_values[:, -1] = np.round(opcacity * 255)
+    lookup_table.values = table_values
 
 
 def _validate_label_position(label_position: tuple[float, float], param_name: str):
@@ -114,8 +126,8 @@ def get_colormap(cmap: str | Colormap) -> Colormap:
     Parameters
     ----------
     cmap : :obj:`str` or :obj:`Colormap`
-        The name of a nilearn colormap (e.g. "cold_hot", "cyan_orange") or a matplotlib colormap
-        (e.g. "RdBu_r").
+        The name of a nilearn colormap (e.g. "cold_hot", "cyan_orange")
+        or a matplotlib colormap (e.g. "RdBu_r").
 
     Returns
     -------
@@ -180,8 +192,9 @@ class SurfaceRenderer:
     """
     Render Per-Vertex Data on Cortical Surfaces.
 
-    Builds the scene (meshes, views, lighting, colormaps) once and re-uses it for every call to :meth:`render`, so rendering a frame
-    only updates the vertex data. Each view of each hemisphere is a panel and ``layout`` Scontrols how the panels are arranged.
+    Builds the scene (meshes, views, lighting, colormaps) once and re-uses it
+    for every call to :meth:`render`, so rendering a frame only updates the vertex
+    data. Each view of each hemisphere is a panel and ``layout`` Scontrols how the panels are arranged.
 
     Parameters
     ----------
@@ -193,15 +206,17 @@ class SurfaceRenderer:
         The right hemisphere surface to display.
 
     views : :obj:`dict[str, list[View]]` or :obj:`None`, default=None
-        The views to render for each hemisphere, with the keys "lh" and "rh". A hemisphere can be omitted to exclude it. Views are "lateral", "medial", "dorsal",
-        "ventral", "anterior", "posterior" or a custom ``(x, y, z)`` rotation in degrees. If None, ``{"lh": ["lateral", "medial"], "rh": ["lateral", "medial"]}`` is used.
+        The views to render for each hemisphere, with the keys "lh" and "rh". A hemisphere can
+        be omitted to exclude it. Views are "lateral", "medial", "dorsal", "ventral", "anterior", "posterior"
+        or a custom ``(x, y, z)`` rotation in degrees. If None, ``{"lh": ["lateral", "medial"], "rh": ["lateral", "medial"]}`` is used.
 
     layout : :obj:`Literal["row", "grid"]`, default="row"
         How the panels are arranged. "row" places all panels side by side in a single row, left hemisphere first. "grid"
         places the hemispheres in columns (left, right) and the views in rows, in the order given in ``views``.
 
     sulcal_depths : :obj:`tuple[str | NDArray, str | NDArray]` or :obj:`None`, default=None
-        The ``(left, right)`` sulcal depth maps drawn underneath the data, as GIfTI file paths or arrays. If None, a flat backdrop is drawn instead.
+        The ``(left, right)`` sulcal depth maps drawn underneath the data, as GIfTI file paths
+        or arrays. If None, a flat backdrop is drawn instead.
 
     size : :obj:`tuple[int, int]`, default=(400, 300)
         Width and height of each panel in pixels.
@@ -210,8 +225,10 @@ class SurfaceRenderer:
         Camera zoom applied to each panel.
 
     hemisphere_spacing : :obj:`int`, default=0
-        Width in pixels of the empty space between the left and right hemisphere panels (between the last left panel and the first right panel in "row" layout,
-        or between the two columns in "grid" layout). Brains maintain there size but the spacing between the panels change.
+        Width in pixels of the empty space between the left and right hemisphere panels
+        (between the last left panel and the first right panel in "row" layout, or betwee
+          the two columns in "grid" layout). Brains maintain there size but the spacing between
+          the panels change.
 
     top_spacing : :obj:`int`, default=0
         Height in pixels of an header space above all panels. Brains maintain there size but the spacing from the top of the panels change.
@@ -222,8 +239,11 @@ class SurfaceRenderer:
     color_range : :obj:`tuple[float, float]`, default=(-3.0, 3.0)
         The ``(vmin, vmax)`` of the colormap.
 
-    threshold : :obj:`float`, default=0.0
-        Vertices whose absolute value is below this threshold are transparent.
+    threshold : :obj:`float` or :obj:`tuple[float, float]`, default=0.0
+        Vertices whose absolute value is below this threshold are transparent. If a ``(lower, upper)``
+        tuple, then smooth thresholding is used where values under ``lower`` are transparent and values
+        from ``lower`` to ``higher`` are a gradient of opacity values (computed using smooth hermite
+        interpolation) where the halfway point is 50% opacity and ``higher`` is 100% opacity.
 
     zero_transparent : :obj:`bool`, default=True
         Whether vertices with a value of exactly 0 are transparent.
@@ -244,7 +264,8 @@ class SurfaceRenderer:
         Static text drawn in every panel of a hemisphere (e.g. ``{"lh": "L", "rh": "R"}``).
 
     panel_label_position : :obj:`tuple[float, float]`, default=(0.5, 0.02)
-        The ``(x, y)`` position of the panel labels as fractions of the panel's width and height, with ``(0, 0)`` the lower left corner of the panel and ``(1, 1)`` its upper right.
+        The ``(x, y)`` position of the panel labels as fractions of the panel's width and height,
+        with ``(0, 0)`` the lower left corner of the panel and ``(1, 1)`` its upper right.
 
     panel_label_anchor : :obj:`tuple[Literal["left", "center", "right"], Literal["bottom", "center", "top"]]`, default=("center", "bottom")
         The ``(horizontal, vertical)`` point of the panel label text placed at ``panel_label_position``.
@@ -290,7 +311,7 @@ class SurfaceRenderer:
         top_spacing: int = 0,
         cmap: str | Colormap = "cold_hot",
         color_range: tuple[float, float] = (-3.0, 3.0),
-        threshold: float = 0.0,
+        threshold: float | tuple[float, float] = 0.0,
         zero_transparent: bool = True,
         background: str | tuple[float, float, float] = "black",
         sulcal_cmap: Colormap = DARK_SULCAL_CMAP,
@@ -319,7 +340,18 @@ class SurfaceRenderer:
 
         _validate_anchor(panel_label_anchor, "panel_label_anchor")
 
+        lower_threshold, upper_threshold = (
+            tuple(threshold)
+            if isinstance(threshold, (tuple, list))
+            else (threshold,) * 2
+        )
+        if not 0 <= lower_threshold <= upper_threshold:
+            raise ValueError(
+                "``threshold`` must be a value of 0 or greater or a (lower, upper) tuple with 0 <= lower <= upper."
+            )
+
         self.threshold = threshold
+        self._threshold_bounds = (float(lower_threshold), float(upper_threshold))
         self.zero_transparent = zero_transparent
         self.layout = layout
         self._color_range = tuple(color_range)
@@ -462,8 +494,8 @@ class SurfaceRenderer:
         """
         The ``(x, y)`` center of the gutter between the hemispheres.
 
-        Pass it as ``label_position`` with ``label_anchor=("center", "center")`` to draw the label in the gutter. Equals ``(0.5, 0.5)`` when
-        both hemispheres have the same number of views.
+        Pass it as ``label_position`` with ``label_anchor=("center", "center")`` to draw the label
+        between hemispheres. Equals ``(0.5, 0.5)`` when both hemispheres have the same number of views.
         """
         if not self.hemisphere_spacing:
             return (0.5, 0.5)
@@ -478,8 +510,8 @@ class SurfaceRenderer:
         """
         The ``(x, y)`` center of the header above the panel.
 
-        Pass it as ``label_position`` with ``label_anchor=("center", "center")`` to draw the label centered above the brains. Equals ``(0.5, 0.98)``
-        when there is no ``top_spacing``.
+        Pass it as ``label_position`` with ``label_anchor=("center", "center")`` to draw the label
+        centered above the brains. Equals ``(0.5, 0.98)`` when there is no ``top_spacing``.
         """
         if not self.top_spacing:
             return (0.5, 0.98)
@@ -517,18 +549,26 @@ class SurfaceRenderer:
         )
         sulcal_actor.orientation = orientation
 
+        opacity = self._smoothstep(color_range)
         data_actor = self.plotter.add_mesh(
             mesh,
             scalars=_DATA_LAYER,
             cmap=data_cmap,
             clim=color_range,
+            n_colors=_N_COLORS,
             nan_opacity=0.0,
             show_scalar_bar=False,
             interpolate_before_map=True,
             **_SHADING,
         )
         data_actor.orientation = orientation
-        data_actor.force_opaque = True
+        data_actor.force_opaque = opacity is None
+        if opacity is not None:
+            _set_lookup_table_opacity(data_actor, opacity)
+            data_actor.mapper.SetRelativeCoincidentTopologyPolygonOffsetParameters(
+                -1, -1
+            )
+
         self._data_actors.append(data_actor)
 
         self.plotter.camera_position = "xy"
@@ -546,7 +586,8 @@ class SurfaceRenderer:
         """
         The ``(vmin, vmax)`` of the data colormap.
 
-        Can be reassigned between calls to :meth:`render` (e.g. to give each task of a movie its own color range) without rebuilding the scene.
+        Can be reassigned between calls to :meth:`render` (e.g. to give each task of a
+        movie its own color range) without rebuilding the scene.
         """
         return self._color_range
 
@@ -559,8 +600,29 @@ class SurfaceRenderer:
             )
 
         self._color_range = (float(vmin), float(vmax))
+        opacity = self._smoothstep(self._color_range)
         for data_actor in self._data_actors:
             data_actor.mapper.scalar_range = self._color_range
+            if opacity is not None:
+                _set_lookup_table_opacity(data_actor, opacity)
+
+    def _smoothstep(
+        self, color_range: tuple[float, float]
+    ) -> NDArray[np.floating] | None:
+        """Return the opacity of each colormap for a soft threshold, or None for a hard threshold."""
+        # https://thebookofshaders.com/glossary/?search=smoothstep
+        lower_threshold, upper_threshold = self._threshold_bounds
+        if lower_threshold == upper_threshold:
+            return None
+
+        values = np.linspace(*color_range, _N_COLORS)
+        ramp = np.clip(
+            (np.abs(values) - lower_threshold) / (upper_threshold - lower_threshold),
+            0,
+            1,
+        )
+
+        return ramp * ramp * (3 - 2 * ramp)
 
     def _mask_transparent(self, data: NDArray, hemisphere: str) -> NDArray:
         """Return a float copy of the data with transparent vertices set to NaN."""
@@ -575,8 +637,8 @@ class SurfaceRenderer:
         if self.zero_transparent:
             transparent |= data == 0
 
-        if self.threshold > 0:
-            transparent |= np.abs(data) < self.threshold
+        if self._threshold_bounds[0] > 0:
+            transparent |= np.abs(data) < self._threshold_bounds[0]
 
         data[transparent] = np.nan
 
@@ -605,8 +667,9 @@ class SurfaceRenderer:
             Text drawn over the frame.
 
         label_position : :obj:`tuple[float, float]`, default=(0.02, 0.98)
-            The ``(x, y)`` position of the label as fractions of the frame's width and height, with ``(0, 0)`` the lower left corner
-            of the frame and ``(1, 1)`` its upper right (increasing ``y`` places the label closer to the top of the frame).
+            The ``(x, y)`` position of the label as fractions of the frame's width and height,
+            with ``(0, 0)`` the lower left corner of the frame and ``(1, 1)`` its upper right (increasing
+            ``y`` places the label closer to the top of the frame).
 
         label_anchor : :obj:`tuple[Literal["left", "center", "right"], Literal["bottom", "center", "top"]]`, default=("left", "top")
             The ``(horizontal, vertical)`` point of the text placed at ``label_position``. For instance,
@@ -636,9 +699,19 @@ class SurfaceRenderer:
         ) = label_anchor
         self._label.input = label or ""
 
-        self.plotter.render()
+        if self._threshold_bounds[0] == self._threshold_bounds[1]:
+            self.plotter.render()
 
-        return self.plotter.screenshot(return_img=True)
+            return self.plotter.screenshot(return_img=True)
+
+        resolve_coincident_topology = vtkMapper.GetResolveCoincidentTopology()
+        vtkMapper.SetResolveCoincidentTopologyToPolygonOffset()
+        try:
+            self.plotter.render()
+
+            return self.plotter.screenshot(return_img=True)
+        finally:
+            vtkMapper.SetResolveCoincidentTopology(resolve_coincident_topology)
 
     def close(self) -> None:
         """Release the render window."""

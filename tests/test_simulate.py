@@ -3,18 +3,18 @@ from pathlib import Path
 import nibabel as nib, pytest
 
 from bidsaid.simulate import (
-    simulate_nifti_image,
+    simulate_nifti_img,
     simulate_bids_dataset,
 )
 
 
-def test_simulate_nifti_image():
-    """Test for ``simulate_nifti_image``."""
-    img = simulate_nifti_image(img_shape=(20, 20, 20, 20))
+def test_simulate_nifti_img():
+    """Test for ``simulate_nifti_img``."""
+    img = simulate_nifti_img(img_shape=(20, 20, 20, 20))
     assert isinstance(img, nib.Nifti1Image)
 
     with pytest.raises(ValueError):
-        simulate_nifti_image((10, 10))
+        simulate_nifti_img((10, 10))
 
 
 @pytest.mark.parametrize("n_sessions", [1, None])

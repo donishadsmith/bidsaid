@@ -4,7 +4,7 @@ pytest.importorskip("pyvista")
 pytest.importorskip("neuromaps")
 
 from bidsaid.movie import virtual_display
-from bidsaid.simulate import simulate_nifti_image
+from bidsaid.simulate import simulate_nifti_img
 from bidsaid.surface import (
     fetch_fsaverage_surfaces,
     get_cortex_masks,
@@ -32,7 +32,7 @@ def coordinates(surfaces):
 def surface_data(surfaces):
     """A simulated image projected onto the surfaces as ``(lh, rh)`` arrays."""
     return project_to_surface(
-        simulate_nifti_image((20, 20, 10, 3)),
+        simulate_nifti_img((20, 20, 10, 3)),
         surfaces["pial"],
         surfaces["white"],
         get_cortex_masks(surfaces["medial"]),

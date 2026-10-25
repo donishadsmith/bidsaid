@@ -15,7 +15,7 @@ from bidsaid.movie import (
     compute_frame_timing,
     mp4_to_gif,
 )
-from bidsaid.simulate import simulate_nifti_image
+from bidsaid.simulate import simulate_nifti_img
 from bidsaid.surface import get_cortex_masks
 from bidsaid.visual import SurfaceRenderer
 from .test_visual import surfaces
@@ -51,7 +51,7 @@ def test_movie_writer(tmp_dir, surfaces, renderer):
         ("02", "rest", 4),
     ):
         nifti_file = dst_dir / f"sub-{subject_id}_task-{task_name}_bold.nii.gz"
-        nib.save(simulate_nifti_image((20, 20, 10, n_volumes)), nifti_file)
+        nib.save(simulate_nifti_img((20, 20, 10, n_volumes)), nifti_file)
         surface_runs.append(
             create_surface_run(
                 nifti_file,

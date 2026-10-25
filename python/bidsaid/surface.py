@@ -13,6 +13,7 @@ import nibabel as nib, numpy as np
 from nilearn.image import smooth_img
 from nilearn.surface import vol_to_surf
 from numpy.typing import NDArray
+from scipy.ndimage import gaussian_filter1d
 
 from bidsaid.io import load_nifti, NiftiFileorImage
 from bidsaid.logging import setup_logger
@@ -138,8 +139,9 @@ def project_to_surface(
     white_surfaces: tuple[SurfaceMesh, SurfaceMesh] | None = None,
     cortex_masks: list[NDArray[np.bool_]] | None = None,
     fwhm: float | int | None = None,
+    temporal_sigma: float | int | None = None,
     max_volumes: int | None = None,
-    interpolation: Literal["linear", "nearest"] = "linear",
+    interpolation_method: Literal["linear", "nearest"] = "linear",
     radius: float = 3.0,
     dtype: type = np.float32,
 ) -> list[NDArray[np.floating]]:
@@ -164,12 +166,16 @@ def project_to_surface(
         The ``[left, right]`` cortex masks from :func:`get_cortex_masks`. Vertices outside the mask (the medial wall) are set to 0.
 
     fwhm : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
-        Full width at half maximum (mm) of the Gaussian smoothing applied to the image before projection.
+        Full width at half maximum (mm) of the Gaussian spatial smoothing applied to the image before projection.
+
+    temporal_sigma : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
+        Sigma value passed to `Scipy's ``gaussian_filter1d`` function for temporal smoothing
+        <https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html>_`
 
     max_volumes : :obj:`int` or :obj:`None`, default=None
         Only project the first N volumes of a 4D image
 
-    interpolation : :obj:`Literal["linear", "nearest"]`, default="linear"
+    interpolation_method : :obj:`Literal["linear", "nearest"]`, default="linear"
         Interpolation used when sampling the image.
 
     radius : :obj:`float`, default=3.0
@@ -191,6 +197,13 @@ def project_to_surface(
     if fwhm:
         nifti_img = smooth_img(nifti_img, fwhm)
 
+    if temporal_sigma:
+        nifti_img = nib.Nifti1Image(
+            gaussian_filter1d(nifti_img.get_fdata(), temporal_sigma, mode="nearest"),
+            nifti_img.affine,
+            nifti_img.header,
+        )
+
     hemispheres = []
     for hemisphere_index in range(2):
         pial_surface = load_surface_mesh(pial_surfaces[hemisphere_index])
@@ -203,7 +216,7 @@ def project_to_surface(
             nifti_img,
             pial_surface,
             inner_mesh=white_surface,
-            interpolation=interpolation,
+            interpolation=interpolation_method,
             radius=radius,
         )
         surface_data = np.nan_to_num(surface_data).astype(dtype, copy=False)

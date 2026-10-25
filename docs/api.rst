@@ -90,13 +90,13 @@ Module for input/output operations on NIfTI files and images.
    :toctree: generated/
 
    load_nifti
-   compress_image
+   compress_img
    is_nifti_truncated
    regex_glob
    get_nifti_header
    get_nifti_affine
    replace_ext
-   compute_uncompressed_image_size
+   compute_uncompressed_img_size
    truncate_nifti_to_complete_volumes
 
 :mod:`bidsaid.path_utils`
@@ -132,14 +132,14 @@ from NIfTIs.
    determine_slice_axis
    get_hdr_metadata
    get_n_volumes
-   get_image_orientation
+   get_img_orientation
    direction_to_voxel_axis
    get_n_slices
    get_tr
    create_slice_timing
    is_3d_img
    get_scanner_info
-   infer_task_from_image
+   infer_task_from_img
    get_recon_matrix_pe
    compute_effective_echo_spacing
    compute_total_readout_time
@@ -209,10 +209,14 @@ Module for quality control metrics and assessment of fMRI data.
    upsample_img
    downsample_array
    upsample_array
-   interpolate_censored_array
+   interpolate_censored_arr
    interpolate_censored_img
-   regress_confounds_array
+   regress_confounds_arr
    regress_confounds
+   zscore_img
+   zscore_array
+   zscore_to_reference
+   zscore_to_reference_arr
 
 :mod:`bidsaid.simulate`
 --------------------------
@@ -225,7 +229,7 @@ Module for simulating NIfTI images and BIDS datasets.
    :nosignatures:
    :toctree: generated/
 
-   simulate_nifti_image
+   simulate_nifti_img
    simulate_bids_dataset
 
 :mod:`bidsaid.surface`

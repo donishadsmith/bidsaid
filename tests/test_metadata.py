@@ -42,17 +42,17 @@ def test_get_n_volumes(nifti_img_and_path):
     img, _ = nifti_img_and_path
     assert bids_meta.get_n_volumes(img) == 5
 
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
     from bidsaid._exceptions import DataDimensionError
 
     with pytest.raises(DataDimensionError):
-        bids_meta.get_n_volumes(simulate_nifti_image((10, 10, 10)))
+        bids_meta.get_n_volumes(simulate_nifti_img((10, 10, 10)))
 
 
-def test_get_image_orientation(nifti_img_and_path):
-    """Test for ``get_image_orientation``"""
+def test_get_img_orientation(nifti_img_and_path):
+    """Test for ``get_img_orientation``"""
     img, _ = nifti_img_and_path
-    orientation_dict, orientation = bids_meta.get_image_orientation(img)
+    orientation_dict, orientation = bids_meta.get_img_orientation(img)
     assert orientation_dict == {"i": "L -> R", "j": "P -> A", "k": "I -> S"}
     assert orientation == ("R", "A", "S")
 
@@ -88,9 +88,9 @@ def test_get_tr(nifti_img_and_path):
 @pytest.mark.parametrize("slice_acquisition_method", ("sequential", "interleaved"))
 def test_create_slice_timing_singleband(slice_acquisition_method):
     """Test for ``create_slice_timing`` for singleband acquisition."""
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    img = simulate_nifti_image((10, 10, 4, 10))
+    img = simulate_nifti_img((10, 10, 4, 10))
     img.header["pixdim"][4] = 2
     img.header["slice_end"] = 3
 
@@ -151,9 +151,9 @@ def test_create_slice_timing_singleband(slice_acquisition_method):
 
 
 def test_philips_interleaved():
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    img = simulate_nifti_image((10, 10, 9, 10))
+    img = simulate_nifti_img((10, 10, 9, 10))
     img.header["pixdim"][4] = 2
     img.header["slice_end"] = 8
 
@@ -214,9 +214,9 @@ def test_central_and_reversed_central(slice_acquisition_method):
     Test for ``create_slice_timing`` for singleband acquisition
     with the "central" and "reversed_central" order.
     """
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    img = simulate_nifti_image((10, 10, 5, 10))
+    img = simulate_nifti_img((10, 10, 5, 10))
     img.header["pixdim"][4] = 2
     img.header["slice_end"] = 4
 
@@ -231,7 +231,7 @@ def test_central_and_reversed_central(slice_acquisition_method):
     else:
         assert slice_timing_list == [0, 0.8, 1.6, 1.2, 0.4]
 
-    img = simulate_nifti_image((10, 10, 6, 10))
+    img = simulate_nifti_img((10, 10, 6, 10))
     img.header["pixdim"][4] = 2
     img.header["slice_end"] = 5
 
@@ -250,9 +250,9 @@ def test_central_and_reversed_central(slice_acquisition_method):
 @pytest.mark.parametrize("slice_acquisition_method", ("sequential", "interleaved"))
 def test_create_slice_timing_multiband(slice_acquisition_method):
     """Test for ``create_slice_timing`` for multiband acquisition."""
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    img = simulate_nifti_image((12, 12, 10, 12))
+    img = simulate_nifti_img((12, 12, 10, 12))
     img.header["pixdim"][4] = 2
     img.header["slice_end"] = 9
 
@@ -353,9 +353,9 @@ def test_create_slice_timing_multiband(slice_acquisition_method):
 
 def test_is_3d_img(nifti_img_and_path):
     """Test for ``is_3d_img``."""
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    img = simulate_nifti_image((10, 10, 10))
+    img = simulate_nifti_img((10, 10, 10))
     assert bids_meta.is_3d_img(img)
 
     img, _ = nifti_img_and_path
@@ -377,11 +377,11 @@ def test_get_scanner_info(nifti_img_and_path):
 @pytest.mark.parametrize(
     "task_volumes", ({5: "flanker", 10: "nback"}, {"flanker": 5, "nback": 10})
 )
-def test_infer_task_from_image(nifti_img_and_path, task_volumes):
-    """Test for ``infer_task_from_image``."""
+def test_infer_task_from_img(nifti_img_and_path, task_volumes):
+    """Test for ``infer_task_from_img``."""
     img, _ = nifti_img_and_path
 
-    assert bids_meta.infer_task_from_image(img, task_volumes) == "flanker"
+    assert bids_meta.infer_task_from_img(img, task_volumes) == "flanker"
 
 
 def test_get_recon_matrix_pe(nifti_img_and_path):
@@ -421,20 +421,20 @@ def test_compute_total_readout_time():
 
 def test_needs_resampling():
     """Test for ``needs_resampling``"""
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    img_1 = simulate_nifti_image((97, 115, 98, 50))
+    img_1 = simulate_nifti_img((97, 115, 98, 50))
     assert not bids_meta.needs_resampling(img_1, img_1)
 
-    img_2 = simulate_nifti_image((97, 115, 90, 50))
+    img_2 = simulate_nifti_img((97, 115, 90, 50))
     assert bids_meta.needs_resampling(img_1, img_2)
 
 
 def test_direction_to_voxel_axis():
     """Test for ``direction_to_voxel_axis``"""
-    from bidsaid.simulate import simulate_nifti_image
+    from bidsaid.simulate import simulate_nifti_img
 
-    nifti_img = simulate_nifti_image(img_shape=(5, 5, 5, 5))
+    nifti_img = simulate_nifti_img(img_shape=(5, 5, 5, 5))
     axis, pos = bids_meta.direction_to_voxel_axis(nifti_img, ("A", "P"))
     assert axis == "j"
     assert pos == 1

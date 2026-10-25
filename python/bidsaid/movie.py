@@ -170,6 +170,7 @@ def create_surface_run(
     n_interpolated_frames: int = 0,
     interpolation_method: Literal["cubic", "pchip"] = "cubic",
     fwhm: float | int | None = None,
+    temporal_sigma: float | int | None = None,
     max_volumes: int | None = None,
     color_range: tuple[float, float] | None = None,
     dtype: type = np.float32,
@@ -215,6 +216,10 @@ def create_surface_run(
     fwhm : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
         Full width at half maximum (mm) of the Gaussian smoothing applied before projection.
 
+    temporal_sigma : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
+        Sigma value passed to `Scipy's ``gaussian_filter1d`` function for temporal smoothing
+        <https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html>_`
+
     max_volumes : :obj:`int` or :obj:`None`, default=None
         Only use the first N volumes.
 
@@ -255,6 +260,7 @@ def create_surface_run(
         white_surfaces,
         cortex_masks,
         fwhm=fwhm,
+        temporal_sigma=temporal_sigma,
         max_volumes=max_volumes,
         dtype=dtype,
     )
