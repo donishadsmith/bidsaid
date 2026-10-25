@@ -63,7 +63,7 @@ create_bids_file(
 
 ### Extracting Metadata from NIfTI Headers
 ```python
-from bidsaid.metadata import get_tr, create_slice_timing, get_image_orientation
+from bidsaid.metadata import get_tr, create_slice_timing, get_img_orientation
 
 tr = get_tr("sub-01_bold.nii.gz")
 slice_timing = create_slice_timing(
@@ -71,7 +71,7 @@ slice_timing = create_slice_timing(
     slice_acquisition_method="interleaved",
     multiband_factor=4,
 )
-orientation_map, orientation = get_image_orientation("sub-01_bold.nii.gz")
+orientation_map, orientation = get_img_orientation("sub-01_bold.nii.gz")
 ```
 
 ### Loading Raw Log Files
@@ -201,13 +201,13 @@ from bidsaid.movie import (
     mp4_to_gif,
     virtual_display,
 )
-from bidsaid.simulate import simulate_nifti_image
+from bidsaid.simulate import simulate_nifti_img
 from bidsaid.surface import fetch_fsaverage_surfaces, get_cortex_masks
 from bidsaid.visual import SurfaceRenderer
 
 
 def simulate_denoised_img():
-    nifti_img = simulate_nifti_image((64, 76, 64, 10))
+    nifti_img = simulate_nifti_img((64, 76, 64, 10))
     mask = nifti_img.get_fdata().any(axis=-1)
     data = smooth_img(nifti_img, fwhm=8).get_fdata()
     data[mask] = (data[mask] - data[mask].mean(axis=-1, keepdims=True)) / data[
@@ -241,21 +241,21 @@ surface_runs = [
         surfaces["white"],
         cortex_masks,
         n_interpolated_frames=47,
+        fwhm=6,
+        temporal_sigma=1,
         interpolation_method="cubic",
     )
     for denoised_file in denoised_files
 ]
 
-threshold = 1.0
-vmax = compute_vmax(surface_runs, threshold=threshold)
-
+vmax = compute_vmax(surface_runs)
 with (
     virtual_display(),
     SurfaceRenderer(
         *surfaces["inflated"],
         sulcal_depths=surfaces["sulc"],
         color_range=(-vmax, vmax),
-        threshold=threshold,
+        threshold=(0.2, 0.4),  # can use single value for hard threshold
         top_spacing=80,
     ) as renderer,
 ):
@@ -270,6 +270,64 @@ with (
 
 gif_file = mp4_to_gif(movie_files[-1], loop=0)
 ```
+<details>
+<summary>Output</summary>
+
+```text
+[10/25/26 18:29:10] INFO     2026-10-25 18:29:10,874 bidsaid.movie [INFO] Projecting to surface:       movie.py:256
+                             sub-01_task-rest_desc-denoised_bold.nii.gz
+
+[10/25/26 18:29:11] INFO     2026-10-25 18:29:11,392 bidsaid.movie [INFO] Projecting to surface:       movie.py:256
+                             sub-01_task-music_desc-denoised_bold.nii.gz
+
+                    INFO     2026-10-25 18:29:11,923 bidsaid.movie [INFO] Projecting to surface:       movie.py:256
+                             sub-02_task-rest_desc-denoised_bold.nii.gz
+
+[10/25/26 18:29:12] INFO     2026-10-25 18:29:12,428 bidsaid.movie [INFO] Projecting to surface:       movie.py:256
+                             sub-02_task-music_desc-denoised_bold.nii.gz
+
+[10/25/26 18:29:14] INFO     2026-10-25 18:29:14,134 bidsaid.movie [INFO] Creating                     movie.py:456
+                             sub-01_desc-surface_movie.mp4 with 433 rendered frames at 48.00 fps (each
+
+                             frame shown 1x, playback speed=1.00x real time).
+                    INFO     2026-10-25 18:29:14,146 bidsaid.movie [INFO] Creating                     movie.py:456
+                             sub-02_desc-surface_movie.mp4 with 433 rendered frames at 48.00 fps (each
+                             frame shown 1x, playback speed=1.00x real time).
+
+                    INFO     2026-10-25 18:29:14,148 bidsaid.movie [INFO] Creating                     movie.py:456
+                             task-rest_desc-surface_movie.mp4 with 433 rendered frames at 48.00 fps
+                             (each frame shown 1x, playback speed=1.00x real time).
+
+                    INFO     2026-10-25 18:29:14,150 bidsaid.movie [INFO] Creating                     movie.py:456
+                             task-music_desc-surface_movie.mp4 with 433 rendered frames at 48.00 fps
+                             (each frame shown 1x, playback speed=1.00x real time).
+
+                    INFO     2026-10-25 18:29:14,152 bidsaid.movie [INFO] Creating                     movie.py:456
+                             group_desc-surface_movie.mp4 with 433 rendered frames at 48.00 fps (each
+                             frame shown 1x, playback speed=1.00x real time).
+
+Rendering frames: 100%|██████████| 433/433 [00:23<00:00, 18.30frame/s]
+
+[10/25/26 18:29:38] INFO     2026-10-25 18:29:38,218 bidsaid.movie [INFO] Saved movie to:              movie.py:476
+                             movies\sub-01_desc-surface_movie.mp4
+
+                    INFO     2026-10-25 18:29:38,489 bidsaid.movie [INFO] Saved movie to:              movie.py:476
+                             movies\sub-02_desc-surface_movie.mp4
+
+                    INFO     2026-10-25 18:29:38,710 bidsaid.movie [INFO] Saved movie to:              movie.py:476
+                             movies\task-rest_desc-surface_movie.mp4
+
+                    INFO     2026-10-25 18:29:38,922 bidsaid.movie [INFO] Saved movie to:              movie.py:476
+                             movies\task-music_desc-surface_movie.mp4
+
+[10/25/26 18:29:39] INFO     2026-10-25 18:29:39,314 bidsaid.movie [INFO] Saved movie to:              movie.py:476
+                             movies\group_desc-surface_movie.mp4
+
+[10/25/26 18:30:56] INFO     2026-10-25 18:30:56,581 bidsaid.movie [INFO] Saved GIF with 433 frames   movie.py:1043
+                             to: movies\group_desc-surface_movie.gif
+```
+
+</details>
 
 ![Surface Movie](assets/group_desc-surface_movie.gif)
 

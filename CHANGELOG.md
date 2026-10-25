@@ -2,6 +2,9 @@
 
 Documentation of changes for each version of ``BIDS-Aid``.
 
+## [0.36.0] - 2026-10-25
+- Add smoothstep, normalize module, and change all 'image' to 'img'
+
 ## [0.35.0] - 2026-10-23
 - Add a simple regression module that doesnt auto censor or auto demean the output
 
