@@ -2,6 +2,9 @@
 
 Documentation of changes for each version of ``BIDS-Aid``.
 
+## [0.36.1] - 2026-10-25
+- Fix name of optional install
+
 ## [0.36.0] - 2026-10-25
 - Add smoothstep, normalize module, and change all 'image' to 'img'
 
