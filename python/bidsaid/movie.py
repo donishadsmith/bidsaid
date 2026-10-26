@@ -168,9 +168,10 @@ def create_surface_run(
     name: str | None = None,
     tr: float | None = None,
     n_interpolated_frames: int = 0,
-    interpolation_method: Literal["cubic", "pchip"] = "cubic",
+    upsample_interpolation_method: Literal["cubic", "pchip"] = "pchip",
     fwhm: float | int | None = None,
     temporal_sigma: float | int | None = None,
+    surface_interpolation_method: Literal["linear", "nearest"] = "linear",
     max_volumes: int | None = None,
     color_range: tuple[float, float] | None = None,
     dtype: type = np.float32,
@@ -210,7 +211,7 @@ def create_surface_run(
     n_interpolated_frames : :obj:`int`, default=0
         The number of interpolated frames inserted in each gap between two real volumes.
 
-    interpolation_method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
+    upsample_interpolation_method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
         The interpolation method used when ``n_interpolated_frames`` is greater than 0.
 
     fwhm : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
@@ -219,6 +220,9 @@ def create_surface_run(
     temporal_sigma : :obj:`float`, :obj:`int`, or :obj:`None`, default=None
         Sigma value passed to `Scipy's ``gaussian_filter1d`` function for temporal smoothing
         <https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html>_`
+
+    surface_interpolation_method : :obj:`Literal["linear", "nearest"]`, default="linear"
+        Interpolation used when sampling the image.
 
     max_volumes : :obj:`int` or :obj:`None`, default=None
         Only use the first N volumes.
@@ -262,15 +266,16 @@ def create_surface_run(
         fwhm=fwhm,
         temporal_sigma=temporal_sigma,
         max_volumes=max_volumes,
+        interpolation_method=surface_interpolation_method,
         dtype=dtype,
     )
 
     if n_interpolated_frames > 0:
         lh = upsample_array(
-            lh, n_interpolated_frames, axis=1, method=interpolation_method
+            lh, n_interpolated_frames, axis=1, method=upsample_interpolation_method
         )
         rh = upsample_array(
-            rh, n_interpolated_frames, axis=1, method=interpolation_method
+            rh, n_interpolated_frames, axis=1, method=upsample_interpolation_method
         )
 
     return SurfaceRun(

@@ -228,6 +228,19 @@ def test_interpolate_censored_img(nifti_img_and_path):
         interpolated_data[..., 4], nifti_fdata[..., 3], rtol=1e-6
     )
 
+    interpolated_img2 = interpolate_censored_img(
+        nifti_img, censor_mask, extrapolate=True
+    )
+    interpolated_data2 = interpolated_img2.get_fdata()
+
+    np.testing.assert_allclose(
+        interpolated_data2[..., retained_timepoints],
+        nifti_fdata[..., retained_timepoints],
+        rtol=1e-6,
+    )
+
+    assert not np.allclose(interpolated_data2[..., 4], nifti_fdata[..., 3], rtol=1e-6)
+
 
 def test_regress_confounds():
     """Test for ``regress_confounds``"""

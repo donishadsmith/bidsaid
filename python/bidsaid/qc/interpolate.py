@@ -28,9 +28,7 @@ def upsample_array(
 
     Inserts ``n_interpolated_frames`` (``n``) interpolated frames in each gap between consecutive
     timepoints along ``axis``. For ``T`` original timepoints, there are ``T - 1`` gaps, so the new
-    length is ``(T - 1) * n + T`` or ``(T - 1) * (n + 1) + 1``. The new TR will be
-    ``TR / (n + 1)``. Original timepoints are retained and can be recovered with
-    :func:`downsample_array` using the same ``n_interpolated_frames``.
+    length is ``(T - 1) * n + T`` or ``(T - 1) * (n + 1) + 1``. The new TR will be ``TR / (n + 1)``.
 
     Parameters
     ----------
@@ -119,6 +117,7 @@ def interpolate_censored_array(
     censor_mask: str | Path | NDArray,
     axis: int = -1,
     method: Literal["cubic", "pchip"] = "cubic",
+    extrapolate: bool | Literal["periodic"] | None = None,
     chunk_size: int = 20000,
 ) -> NDArray[np.floating]:
     """
@@ -126,10 +125,6 @@ def interpolate_censored_array(
 
     Replaces censored timepoints (0 in ``censor_mask``) with values interpolated from the
     retained timepoints (1 in ``censor_mask``) along ``axis``.
-
-    .. important::
-        Censored timepoints before the first or after the last retained timepoint (e.g. dummy scans)
-        use the value of the nearest retained volume instead of interpolating
 
     Parameters
     ----------
@@ -147,6 +142,11 @@ def interpolate_censored_array(
     method : :obj:`Literal["cubic", "pchip"]`, default="cubic"
         The interpolation method to use ("cubic" for cubic spline and "pchip" for
         shape-preserving cubic).
+
+    extrapolate : :obj:`bool`, :obj:`Literal["periodic"]`, or :obj:`None`, default = None
+        If not None or False, estimates values outside the range of the data. If not truthy,
+        censored timepoints before the first or after the last retained timepoint (e.g. dummy scans)
+        use the value of the nearest retained volume instead of interpolating
 
     chunk_size : :obj:`int`, default=20000
         The number of voxels or vertices interpolated at once.
@@ -174,14 +174,18 @@ def interpolate_censored_array(
     censored_timepoints = np.flatnonzero(~censor_mask)
     out_array = array.astype(np.result_type(array.dtype, np.float32), copy=True)
 
-    first_retained_timepoint, last_retained_timepoint = (
-        retained_timepoints[0],
-        retained_timepoints[-1],
-    )
-    is_interior_timepoint = (censored_timepoints > first_retained_timepoint) & (
-        censored_timepoints < last_retained_timepoint
-    )
-    target_timepoints = censored_timepoints[is_interior_timepoint]
+    if not extrapolate:
+        first_retained_timepoint, last_retained_timepoint = (
+            retained_timepoints[0],
+            retained_timepoints[-1],
+        )
+        is_interior_timepoint = (censored_timepoints > first_retained_timepoint) & (
+            censored_timepoints < last_retained_timepoint
+        )
+
+        target_timepoints = censored_timepoints[is_interior_timepoint]
+    else:
+        target_timepoints = censored_timepoints.copy()
 
     flat_array = array.reshape(-1, n_timepoints)
     flat_out_array = out_array.reshape(-1, n_timepoints)
@@ -192,12 +196,13 @@ def interpolate_censored_array(
             retained_timepoints, chunk, axis=-1
         )(target_timepoints)
 
-    flat_out_array[
-        :, censored_timepoints[censored_timepoints < first_retained_timepoint]
-    ] = flat_array[:, [first_retained_timepoint]]
-    flat_out_array[
-        :, censored_timepoints[censored_timepoints > last_retained_timepoint]
-    ] = flat_array[:, [last_retained_timepoint]]
+    if not extrapolate:
+        flat_out_array[
+            :, censored_timepoints[censored_timepoints < first_retained_timepoint]
+        ] = flat_array[:, [first_retained_timepoint]]
+        flat_out_array[
+            :, censored_timepoints[censored_timepoints > last_retained_timepoint]
+        ] = flat_array[:, [last_retained_timepoint]]
 
     return np.moveaxis(flat_out_array.reshape(out_array.shape), -1, axis)
 
@@ -305,6 +310,7 @@ def interpolate_censored_img(
     nifti_file_or_img: str | Path | nib.nifti1.Nifti1Image,
     censor_mask: str | Path | NDArray,
     method: Literal["cubic", "pchip"] = "cubic",
+    extrapolate: bool | Literal["periodic"] | None = None,
     chunk_size: int = 20000,
 ) -> nib.nifti1.Nifti1Image:
     """
@@ -312,10 +318,6 @@ def interpolate_censored_img(
 
     Replaces censored volumes (0 in ``censor_mask``) with values interpolated from the retained
     volumes (1 in ``censor_mask``).
-
-    .. important::
-        Censored timepoints before the first or after the last retained timepoint (e.g. dummy scans)
-        use the value of the nearest retained volume instead of interpolating
 
     Parameters
     ----------
@@ -330,6 +332,11 @@ def interpolate_censored_img(
         The interpolation method to use ("cubic" for cubic spline and "pchip" for
         shape-preserving cubic).
 
+    extrapolate : :obj:`bool`, :obj:`Literal["periodic"]`, or :obj:`None`, default = None
+        If not None or False, estimates values outside the range of the data. If not truthy,
+        censored timepoints before the first or after the last retained timepoint (e.g. dummy scans)
+        use the value of the nearest retained volume instead of interpolating
+
     chunk_size : :obj:`int`, default=20000
         The number of voxels interpolated at once.
 
@@ -341,7 +348,7 @@ def interpolate_censored_img(
     nifti_img = load_nifti(nifti_file_or_img)
     img_data = np.asanyarray(nifti_img.dataobj, dtype=np.float32)
     interpolated_img_fdata = interpolate_censored_array(
-        img_data, censor_mask, -1, method, chunk_size
+        img_data, censor_mask, -1, method, extrapolate, chunk_size
     )
 
     hdr = nifti_img.header.copy()

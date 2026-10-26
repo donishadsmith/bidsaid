@@ -2,7 +2,10 @@
 
 Documentation of changes for each version of ``BIDS-Aid``.
 
-## [0.36.1] - 2026-10-26
+## [0.37.0] - 2026-10-26
+- Allow for extrapolation
+
+## [0.36.2] - 2026-10-26
 - Add function to identify outlier volumes.
 
 ## [0.36.1] - 2026-10-25
