@@ -139,7 +139,7 @@ def zscore_to_reference_array(
 def zscore_to_reference(
     nifti_file_or_img: NiftiFileorImage,
     reference_file_or_img: NiftiFileorImage,
-    mask_img_or_file: NiftiFileorImage | None = None,
+    mask_file_or_img: NiftiFileorImage | None = None,
     match_run_scale: bool = True,
 ) -> nib.nifti1.Nifti1Image:
     """
@@ -161,7 +161,7 @@ def zscore_to_reference(
         Path to the reference functional NIfTI file or a reference functional NIfTI image. Must have the same spatial
         dimensions and affine as the image but can have a different number of volumes.
 
-    mask_img_or_file : :obj:`str`, :obj:`Path`, :obj:`Nifti1Image`, or :obj:`None`, default=None
+    mask_file_or_img : :obj:`str`, :obj:`Path`, :obj:`Nifti1Image`, or :obj:`None`, default=None
         Path to the mask NIfTI file or a mask NIfTI image. Only voxels in the mask are used to match the run scale and z-scored.
         If None, all voxels are used.
 
@@ -186,10 +186,10 @@ def zscore_to_reference(
     nifti_fdata = np.asanyarray(nifti_img.dataobj, dtype=np.float32)
     reference_fdata = np.asanyarray(reference_img.dataobj, dtype=np.float32)
 
-    if mask_img_or_file is None:
+    if mask_file_or_img is None:
         mask_data = np.ones(nifti_fdata.shape[:3], dtype=bool)
     else:
-        mask_data = np.asanyarray(load_nifti(mask_img_or_file).dataobj).astype(bool)
+        mask_data = np.asanyarray(load_nifti(mask_file_or_img).dataobj).astype(bool)
 
     zscored_img_fdata = np.zeros(nifti_fdata.shape, dtype=np.float32)
     zscored_img_fdata[mask_data] = zscore_to_reference_array(

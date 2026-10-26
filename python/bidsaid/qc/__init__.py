@@ -8,6 +8,7 @@ from .censoring import (
     create_spike_regressors,
     compute_consecutive_censor_stats,
     get_n_censored_volumes,
+    find_outlier_volumes,
 )
 from .denoise import regress_confounds, regress_confounds_array
 from .normalize import (

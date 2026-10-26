@@ -4,9 +4,11 @@ from typing import Iterable, Literal
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+from scipy.stats import median_abs_deviation
 
 from .._helpers import is_path
 from ..logging import setup_logger
+from ..io import NiftiFileorImage, load_nifti
 
 LGR = setup_logger(__name__)
 
@@ -395,6 +397,53 @@ def get_n_censored_volumes(arr_or_file: str | Path | NDArray) -> int:
     return arr[arr == 0].size
 
 
+def find_outlier_volumes(
+    zscored_file_or_img: NiftiFileorImage,
+    threshold: float,
+    mask_file_or_img: NiftiFileorImage | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Identify Outlier Volumes.
+
+    A volume's level is the median absolute value across in-brain voxels. Volumes whose level is more
+    than ``threshold`` robust standard deviations (scaled MAD) above the run's median level are outliers.
+
+    Parameters
+    ----------
+    zscored_file_or_img : :obj:`str`, :obj:`Path`, or :obj:`Nifti1Image`
+        Path to the z-scored functional NIfTI file or a z-scored functional NIfTI image.
+
+    threshold : :obj:`float`
+        Number of robust standard deviations above the median level needed to be flagged.
+
+    mask_file_or_img : :obj:`str`, :obj:`Path`, :obj:`Nifti1Image`, or :obj:`None`, default=None
+        Path to the mask NIfTI file or a mask NIfTI image. If None, voxels that are non-zero at any
+        timepoint are used.
+
+    Returns
+    -------
+    tuple[NDArray[np.bool_], NDArray[np.floating]]
+        The first output (boolean array) represents ``(per_volume_medians - median) / spread) > threshold``
+        and the second output (floating point array) specifies the median of that volume.
+    """
+    nifti_fdata = np.asanyarray(
+        load_nifti(zscored_file_or_img).dataobj, dtype=np.float32
+    )
+
+    if mask_file_or_img:
+        mask_img = load_nifti(mask_file_or_img).dataobj.as_type(bool)
+    else:
+        mask_img = nifti_fdata.any(axis=-1)
+
+    per_volume_medians = np.median(np.abs(nifti_fdata[mask_img]), axis=0)
+    median = np.median(per_volume_medians)
+
+    if (spread := median_abs_deviation(per_volume_medians, scale="normal")) == 0:
+        return np.zeros(per_volume_medians.size, dtype=bool), per_volume_medians
+
+    return ((per_volume_medians - median) / spread) > threshold, per_volume_medians
+
+
 __all__ = [
     "compute_n_dummy_scans",
     "compute_framewise_displacement",
@@ -403,4 +452,5 @@ __all__ = [
     "compute_consecutive_censor_stats",
     "create_spike_regressors",
     "get_n_censored_volumes",
+    "find_outlier_volumes",
 ]

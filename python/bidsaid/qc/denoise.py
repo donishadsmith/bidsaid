@@ -131,7 +131,7 @@ def regress_confounds(
     nifti_file_or_img: NiftiFileorImage,
     confounds: pd.DataFrame | NDArray,
     censor_mask: str | Path | NDArray | None = None,
-    mask_img_or_file: NiftiFileorImage | None = None,
+    mask_file_or_img: NiftiFileorImage | None = None,
     interpolation_method: Literal["cubic", "pchip"] | None = None,
     chunk_size: int = 20000,
 ) -> nib.nifti1.Nifti1Image:
@@ -165,7 +165,7 @@ def regress_confounds(
         A 1D binary mask or a path to a text file containing the mask, where 1 indicates volumes used to fit the model
         and 0 indicates volumes excluded from the fit. If None, all volumes are used.
 
-    mask_img_or_file : :obj:`str`, :obj:`Path`, :obj:`Nifti1Image`, or :obj:`None`, default=None
+    mask_file_or_img : :obj:`str`, :obj:`Path`, :obj:`Nifti1Image`, or :obj:`None`, default=None
         Path to the mask NIfTI file or a mask NIfTI image. Voxels outside of the mask are set to zero. If None, all voxels are denoised.
 
     interpolation_method : :obj:`Literal["cubic", "pchip"]` or :obj:`None`, default=None
@@ -183,10 +183,10 @@ def regress_confounds(
     nifti_img = load_nifti(nifti_file_or_img)
     nifti_fdata = np.asanyarray(nifti_img.dataobj, dtype=np.float32)
 
-    if mask_img_or_file is None:
+    if mask_file_or_img is None:
         mask_data = np.ones(nifti_fdata.shape[:3], dtype=bool)
     else:
-        mask_data = np.asanyarray(load_nifti(mask_img_or_file).dataobj).astype(bool)
+        mask_data = np.asanyarray(load_nifti(mask_file_or_img).dataobj).astype(bool)
 
     denoised_img_fdata = np.zeros(nifti_fdata.shape, dtype=np.float32)
     denoised_img_fdata[mask_data] = regress_confounds_array(

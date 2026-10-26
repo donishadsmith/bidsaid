@@ -204,6 +204,7 @@ Module for quality control metrics and assessment of fMRI data.
    compute_consecutive_censor_stats
    create_spike_regressors
    get_n_censored_volumes
+   find_outlier_volumes
    compute_global_signal
    downsample_img
    upsample_img
