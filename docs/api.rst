@@ -116,6 +116,19 @@ Utilities related to parsing or sorting filenames.
    get_file_creation_date
    sort_by_acquisition_order
 
+:mod:`bidsaid.mask`
+--------------------------
+Module for creating masks.
+
+.. currentmodule:: bidsaid.mask
+
+.. autosummary::
+   :template: function.rst
+   :nosignatures:
+   :toctree: generated/
+
+   create_sphere_mask
+
 :mod:`bidsaid.metadata`
 --------------------------
 Module containing functions to extract metadata information

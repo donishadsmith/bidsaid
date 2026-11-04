@@ -2,6 +2,9 @@
 
 Documentation of changes for each version of ``BIDS-Aid``.
 
+## [0.37.1] - 2026-11-04
+- Add function for creating sphere masks
+
 ## [0.37.0] - 2026-10-26
 - Allow for extrapolation
 
