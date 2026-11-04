@@ -20,7 +20,7 @@ io -- Generic operations related to loading NIfTI data
 logging -- Set up a logger using ``RichHandler`` as the default handler if a root or
 module specific handler is not available
 
-mask -- Module for creating masks
+masking -- Module for creating masks
 
 metadata -- Operations related to extracting or creating metadata information from NIfTI images
 

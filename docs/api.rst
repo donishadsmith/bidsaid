@@ -116,11 +116,11 @@ Utilities related to parsing or sorting filenames.
    get_file_creation_date
    sort_by_acquisition_order
 
-:mod:`bidsaid.mask`
+:mod:`bidsaid.masking`
 --------------------------
 Module for creating masks.
 
-.. currentmodule:: bidsaid.mask
+.. currentmodule:: bidsaid.masking
 
 .. autosummary::
    :template: function.rst

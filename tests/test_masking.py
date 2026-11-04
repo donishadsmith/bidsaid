@@ -1,7 +1,7 @@
 import nibabel as nib, numpy as np
 
 from nilearn.datasets import load_mni152_gm_mask
-from bidsaid.mask import create_sphere_mask
+from bidsaid.masking import create_sphere_mask
 
 
 def test_create_sphere_mask():
