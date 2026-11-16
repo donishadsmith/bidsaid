@@ -7,7 +7,7 @@
 [![Test Status](https://github.com/donishadsmith/bidsaid/actions/workflows/testing.yaml/badge.svg)](https://github.com/donishadsmith/bidsaid/actions/workflows/testing.yaml)
 [![codecov](https://codecov.io/gh/donishadsmith/bidsaid/graph/badge.svg?token=PCJ17NA627)](https://codecov.io/gh/donishadsmith/bidsaid)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Documentation Status](https://readthedocs.org/projects/bidsaid/badge/?version=stable)](http://bidsaid.readthedocs.io/en/stable/?badge=stable)
+[![Documentation Status](https://readthedocs.org/projects/bidsaid/badge/?version=latest)](http://bidsaid.readthedocs.io/en/stable/?badge=stable)
 
 
 A toolkit for creating and managing BIDS-compliant fMRI datasets without original DICOMs. Intended for cases that require custom code and flexibility, such as when NIfTI source files lack consistent naming conventions, organized folder hierarchies, or sidecar metadata. Includes utilities for metadata reconstruction from NIfTI headers, file renaming, neurobehavioral log parsing (for E-Prime and Presentation), JSON sidecar generation, surface projection, and making surface clips/movies.
