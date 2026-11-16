@@ -46,7 +46,6 @@ Module for initializing and creating BIDS compliant files.
    save_dataset_description
    create_participant_tsv
    create_sessions_tsv
-   add_cue_timing
 
 :mod:`bidsaid.events`
 ----------------------
@@ -63,6 +62,13 @@ Module containing classes for extracting timing information from Presentation an
    PresentationEventExtractor
    EPrimeBlockExtractor
    EPrimeEventExtractor
+
+.. autosummary::
+   :template: function.rst
+   :nosignatures:
+   :toctree: generated/
+
+   add_cue_timing
 
 :mod:`bidsaid.logging`
 -------------------------

@@ -329,6 +329,6 @@ Rendering frames: 100%|██████████| 433/433 [00:23<00:00, 18.
 
 </details>
 
-![Surface Movie](assets/group_desc-surface_movie.gif)
+![Surface Movie](https://raw.githubusercontent.com/donishadsmith/bidsaid/main/assets/group_desc-surface_movie.gif)
 
 See the [API documentation](https://bidsaid.readthedocs.io/en/latest/api.html) for full parameter details and additional utilities.
