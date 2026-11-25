@@ -2,6 +2,9 @@
 
 Documentation of changes for each version of ``BIDS-Aid``.
 
+## [0.37.2] - 2026-11-25
+- Build for Linux ARM
+
 ## [0.37.1] - 2026-11-04
 - Add function for creating sphere masks
 
