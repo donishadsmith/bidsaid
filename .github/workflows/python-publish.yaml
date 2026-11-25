@@ -1,8 +1,14 @@
 name: Publish
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      PYPI_TOKEN:
+        required: true
 
 permissions:
   contents: read
@@ -26,6 +32,8 @@ jobs:
             target: x86_64
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
       - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
@@ -42,6 +50,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -53,31 +63,32 @@ jobs:
           path: dist
 
   publish:
-      name: Publish to PyPI and attach to release
-      needs: [build, sdist]
-      runs-on: ubuntu-latest
-      permissions:
-        contents: write
-      steps:
-        - uses: actions/download-artifact@v8
-          with:
-            path: dist
-            merge-multiple: true
+    name: Publish to PyPI and attach to release
+    needs: [build, sdist]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
 
-        - uses: actions/setup-python@v7
-          with:
-            python-version: '3.x'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
 
-        - name: Install twine
-          run: pip install twine
+      - name: Install twine
+        run: pip install twine
 
-        - name: Upload to PyPI
-          env:
-            TWINE_USERNAME: __token__
-            TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-          run: twine upload dist/*
+      - name: Upload to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: twine upload dist/*
 
-        - name: Attach files to GitHub Release
-          uses: softprops/action-gh-release@v3
-          with:
-            files: dist/*
+      - name: Attach files to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          files: dist/*
