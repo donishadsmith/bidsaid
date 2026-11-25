@@ -58,6 +58,6 @@ jobs:
     if: needs.release.outputs.created == 'true'
     permissions:
       contents: write
-    uses: ./.github/workflows/.github/workflows/python-publish.yml
+    uses: ./.github/workflows/python-publish.yml
     with:
       tag: ${{ needs.release.outputs.version }}
