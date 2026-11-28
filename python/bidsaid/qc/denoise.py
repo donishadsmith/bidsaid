@@ -121,7 +121,7 @@ def regress_confounds_array(
 
     if interpolation_method and not censor_mask.all():
         flat_out_array = interpolate_censored_array(
-            flat_out_array, censor_mask, -1, interpolation_method, chunk_size
+            flat_out_array, censor_mask, -1, interpolation_method, chunk_size=chunk_size
         )
 
     return np.moveaxis(flat_out_array.reshape(array.shape), -1, axis)
